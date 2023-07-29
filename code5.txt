@@ -1,0 +1,2477 @@
+Dialogue and Narrationlink
+Text is fundamental to visual novels, and generally quite important to storytelling-based games. This text may consist of dialogue labeled with the character that is saying it, and narration, which does not have a speaker. (For convenience, we will lump both dialogue and narration together as dialogue, except where the differences are important.) It's also important that the user be able to customize the look of dialogue to suit their game.
+
+In Ren'Py, most dialogue is written using say statements. The look of dialogue may be customized on a per-character basis by using Character objects.
+
+Say Statementlink
+The say statement is used for dialogue and narration. Since it's almost always the most frequently used statement in Ren'Py scripts, the say statement has a syntax that minimizes the overhead in writing it. Some example say statements are:
+
+
+    "This is narration."
+
+    "Eileen" "This is dialogue, with an explicit character name."
+
+    e "This is dialogue, using a character object instead."
+
+    "Bam!!" with vpunch
+The first form of the say statement consists of a string by itself. This form is used for narration, with the narration being the contents of the string.
+
+The second form consists of two strings. The first string is the name of the character who is speaking, and the second is the dialogue being spoken.
+
+The third form consists of a simple expression followed by a string. The simple expression should evaluate to either a string giving a character name, or a Character object. In the latter case, the character object is used to control how the dialogue is shown.
+
+The final form consists of a string and a with clause which has a transition. In this case, th e string is shown and a screen is shaken at the same time.
+
+Although the precise details of what a say statement does is controlled by the character object used, the usual effect of a say statement is to display dialogue on the screen until the user clicks to dismiss it, then to remove that dialogue on the screen.
+
+Certain characters have special meaning to Ren'Py, and so can't be used in dialogue strings. The { character begins a text tag, and the [ character begins a substitution. To use them in dialogue, double them. It may also be necessary to precede a quote with a backslash to prevent it from closing the string. For example:
+
+"I walked past a sign saying, \"Let's give it 100%!\""
+It's also possible to use a proxy function instead of a character object. More details about this in this section.
+
+Defining Character Objectslink
+By creating a Character object and using it in a say statement, you can customize the look (and to some extent, the behavior) of dialogue. Characters are created by using the define statement to assign a Character to a variable. For example:
+
+define e = Character("Eileen", who_color="#c8ffc8")
+Once this is done, the character can be used in a say statement:
+
+e "Hello, world."
+Character is a Python function that takes a large number of keyword arguments. These keyword arguments control the behavior of the character.
+
+Character(name=..., kind=adv, **args)link
+Creates and returns a Character object, which controls the look and feel of dialogue and narration.
+
+name
+If a string, the name of the character for dialogue. When name is None, display of the name is omitted, as for narration. If no name is given, the name is taken from kind, and otherwise defaults to None.
+
+kind
+The Character to base this Character off of. When used, the default value of any argument not supplied to this Character is the value of that argument supplied to kind. This can be used to define a template character, and then copy that character with changes.
+
+This can also be a namespace, in which case the 'character' variable in the namespace is used as the kind.
+
+Linked Image. An image tag may be associated with a Character. This allows a say statement involving this character to display an image with the tag, and also allows Ren'Py to automatically select a side image to show when this character speaks.
+
+image
+A string giving the image tag that is linked with this character.
+
+Voice Tag. If a voice tag is assign to a Character, the voice files that are associated with it, can be muted or played in the preference screen.
+
+voice_tag
+A String that enables the voice file associated with the Character to be muted or played in the 'voice' channel.
+
+Prefixes and Suffixes. These allow a prefix and suffix to be applied to the name of the character, and to the text being shown. This can be used, for example, to add quotes before and after each line of dialogue.
+
+what_prefix
+A string that is prepended to the dialogue being spoken before it is shown.
+
+what_suffix
+A string that is appended to the dialogue being spoken before it is shown.
+
+who_prefix
+A string that is prepended to the name of the character before it is shown.
+
+who_suffix
+A string that is appended to the name of the character before it is shown.
+
+Changing Name Display. These options help to control the display of the name.
+
+dynamic
+If true, then name should either be a string containing a Python expression, a function, or a callable object. If it's a string, That string will be evaluated before each line of dialogue, and the result used as the name of the character. Otherwise, the function or callable object will be called with no arguments before each line of dialogue, and the return value of the call will be used as the name of the character.
+
+Controlling Interactions. These options control if the dialogue is displayed, if an interaction occurs, and the mode that is entered upon display.
+
+condition
+If given, this should be a string containing a Python expression. If the expression is false, the dialogue does not occur, as if the say statement did not happen.
+
+interact
+If true, the default, an interaction occurs whenever the dialogue is shown. If false, an interaction will not occur, and additional elements can be added to the screen.
+
+advance
+If true, the default, the player can click to advance through the statement, and other means of advancing (such as skip and auto-forward mode) will also work. If false, the player will be unable to move past the say statement unless an alternate means (such as a jump hyperlink or screen) is provided.
+
+mode
+A string giving the mode to enter when this character speaks. See the section on modes for more details.
+
+callback
+A function that is called when events occur while the character is speaking. See the section on Character Callbacks for more information.
+
+Click-to-continue. A click-to-continue indicator is displayed once all the text has finished displaying, to prompt the user to advance.
+
+ctc
+A displayable to use as the click-to-continue indicator, unless a more specific indicator is used.
+
+ctc_pause
+A displayable to use a the click-to-continue indicator when the display of text is paused by the {p} or {w} text tags.
+
+ctc_timedpause
+A displayable to use a the click-to-continue indicator when the display of text is paused by the {p=} or {w=} text tags. When None, this takes its default from ctc_pause, use Null() when you want a ctc_pause but no ctc_timedpause.
+
+ctc_position
+Controls the location of the click-to-continue indicator. If "nestled", the indicator is displayed as part of the text being shown, immediately after the last character. "nestled-close" is similar, except a break is not allowed between the text and the CTC indicator. If "fixed", a new screen containing the CTC indicator is shown, and the position style properties of the CTC displayable are used to position the CTC indicator.
+
+Screens. The display of dialogue uses a screen. These arguments allow you to select that screen, and to provide arguments to it.
+
+screen
+The name of the screen that is used to display the dialogue.
+
+Keyword arguments beginning with show_ have the prefix stripped off, and are passed to the screen as arguments. For example, the value of show_myflag will become the value of the myflag variable in the screen. (The myflag variable isn't used by default, but can be used by a custom say screen.)
+
+One show variable is, for historical reasons, handled by Ren'Py itself:
+
+show_layer
+If given, this should be a string giving the name of the layer to show the say screen on.
+
+Styling Text and Windows. Keyword arguments beginning with who_, what_, and window_ have their prefix stripped, and are used to style the character name, the spoken text, and the window containing both, respectively.
+
+For example, if a character is given the keyword argument who_color="#c8ffc8", the color of the character's name is changed, in this case to green. window_background="frame.png" sets the background of the window containing this character's dialogue.
+
+The style applied to the character name, spoken text, and window can also be set this way, using the who_style, what_style, and window_style arguments, respectively.
+
+Setting config.character_id_prefixes makes it possible to style other displayables as well. For example, when the default GUI is used, styles prefixed with namebox_ are used to style the name of the speaking character.
+
+Say with Image Attributeslink
+When a character is defined with an associated image tag, say statement involving that character may have image attributes placed between the character name and the second string.
+
+In this form, if an image with the given tag is showing, Ren'Py will issue a show command involving the character tag and the attributes. If the image is not shown, Ren'Py will store the attributes for use by side images, but will not show an image.
+
+For example:
+
+define e = Character("Eileen", image="eileen")
+
+label start:
+
+    show eileen mad
+    e "I'm a little upset at you."
+
+    e happy "But it's just a passing thing."
+is equivalent to:
+
+define e = Character("Eileen")
+
+label start:
+
+    show eileen mad
+    e "I'm a little upset at you."
+
+    show eileen happy
+    e "But it's just a passing thing."
+In the above example, the mad and happy replace one another. But it is possible to revert to a happy-less eileen without specifying the mad attribute. An attribute name prepended with the minus sign ( - ) has that effect, just as it does with the show statement.
+
+For example:
+
+define e = Character("Eileen")
+
+label start:
+
+    show eileen
+    e mad "I'm a little upset at you."
+
+    e happy "That's funny."
+
+    e -happy "I'm not sure what to think now."
+When an @ is included in the list of attributes, any element placed after it has an only temporary effect, and is reverted at the end of the line of dialogue.
+
+For example, the following code is equivalent to the previous example:
+
+define e = Character("Eileen", image="eileen")
+
+label start:
+
+    show eileen mad
+    e "I'm a little upset at you."
+
+    e @ happy "That's funny."
+
+    e "I'm not sure what to think now."
+A single line can combine permanent changes coming before the @, and temporary ones coming after.
+
+e happy @ vhappy "Really! That changes everything."
+The minus sign can also be used after the @ sign:
+
+e @ right -mad "My anger is temporarily suspended..."
+e "HOWEVER !"
+To cause a transition to occur whenever the images are changed in this way, set config.say_attribute_transition to a transition. For more control, use config.say_attribute_transition_callback.
+
+Example Characterslink
+Here are a few example characters:
+
+# A character that has its dialogue enclosed in parenthesis.
+define e = Character("Eileen", what_prefix='(', what_suffix=')')
+
+# A character that pulls its name from a variable.
+define p = Character("player_name", dynamic=True)
+Special Characterslink
+A few character names are defined by default, and are used automatically in certain situations. Intentionally redefining these characters can change the behavior of Ren'Py, but accidentally using them can be a problem.
+
+adv
+The default kind of character used by Character. This sets up a character such that one line is displayed on the screen at a time.
+
+nvl
+A kind of Character that causes dialogue to be displayed in NVL-Mode Tutorial, with multiple lines of text on the screen at once.
+
+narrator
+The character that's used to display narration, by say statements without a character name.
+
+name_only
+A character that is used to display dialogue in which the character name is given as a string. This character is copied to a new character with the given name, and then that new character is used to display the dialogue.
+
+centered
+A character that causes what it says to be displayed centered, in the middle of the screen, outside of any window.
+
+vcentered
+A character that causes what it says to be displayed centered in vertically oriented text, in the middle of the screen, outside of any window.
+
+extend
+A character that causes the last character to speak to say a line of dialogue consisting of the last line of dialogue spoken, "{fast}", and the dialogue given to extend. This can be used to have the screen change over the course of dialogue.
+
+Extend is aware of NVL-mode and treats it correctly. Extend does not work properly if the language preference changes between the initial say and the extend.
+
+For example:
+
+# Show the first line of dialogue, wait for a click, change expression, and show
+# the rest.
+
+show eileen concerned
+e "Sometimes, I feel sad."
+show eileen happy
+extend " But I usually quickly get over it!"
+
+# Similar, but automatically changes the expression when the first line is finished
+# showing. This only makes sense when the user doesn't have text speed set all the
+# way up.
+
+show eileen concerned
+e "Sometimes, I feel sad.{nw}"
+show eileen happy
+extend " But I usually quickly get over it!"
+Dialogue Window Managementlink
+Ren'Py includes several statements that allow for management of the dialogue window. As dialogue window is always shown during dialogue, these statements control the presence or absence of the window during non-dialogue interactions.
+
+window show
+The window show statement causes the window to be shown. It takes as an argument an optional transition, which is used to show the window. If the transition is omitted, config.window_show_transition is used.
+
+window hide
+The window hide statement causes the window to be hidden. It takes as an argument an optional transition, which is used to hide the window. If the transition is omitted, config.window_hide_transition is used.
+
+window auto
+This enables automatic management of the window. The window is shown before statements listed in config.window_auto_show – by default, say statements. The window is hidden before statements listed in config.window_auto_hide – by default, scene and call screen statements, and menu statements without a caption. (Only statements are considered, not statement equivalent functions.)
+
+window auto hide, window auto show
+These statements show or hide the window, with an optional transition, like window show or window hide do. However, unlike those statements, this keeps automatic management enabled.
+
+The window auto statement uses config.window_show_transition and config.window_hide_transition to show and hide the window, respectively. window auto is cancelled by window show and window hide.
+
+For example:
+
+window show # shows the window with the default transition, if any.
+pause       # the window is shown during this pause.
+window hide # hides the window.
+pause       # the window is hidden during this pause.
+
+window show dissolve # shows the window with dissolve.
+pause                # the window is shown during this pause.
+window hide dissolve # hides the window with dissolve.
+pause                # the window is hidden during this pause.
+
+
+window auto
+
+"The window is automatically shown before this line of dialogue."
+pause                # the window is shown during this pause.
+
+scene bg washington  # the window is hidden before the scene change.
+with dissolve
+
+window auto show     # Shows the window before it normally would be shown.
+
+show eileen
+with dissolve
+
+"Without window auto show, the window would have been shown here."
+Dialogue window management is subject to the "show empty window" Preference(). If the preference is disabled, the statements above have no effect.
+
+Say with Argumentslink
+Additional arguments can be passed to the say statement by including them in parenthesis after the say statement. For example, one can write:
+
+e "Hello, world." (what_color="#8c8")
+Arguments to the say statement are first processed by config.say_arguments_callback, if it is not None. If any remain, they are then passed to the character, which treats them as if they were present when the character was defined. So, the example above displays the dialogue in green. Special keywords _mode and _with_node will override the ones set in the character only for this interaction.
+
+The interact parameter is a special case : when it was passed as False when defining the Character, passing interact=True will not override that, meaning no interaction will happen in that case.
+
+Note that config.say_arguments_callback will be called every time a say statement executes, and not only when arguments are passed. It can be useful to implement conditional overrides over characters' customizations. For example:
+
+init python:
+    def say_arguments_callback(char, *args, **kwargs):
+        if colorblind_mode:
+            kwargs["what_color"] = "#000"
+        return args, kwargs
+
+define config.say_arguments_callback = say_arguments_callback
+Monologue Modelink
+Some visual novels have extended narration, or multiple blocks of dialogue from the same character. In these cases, typing the name of the character and the quotes multiple times is somewhat redundant.
+
+To cover these cases, Ren'Py supports monologue mode. When dialogue is inside triple-quoted strings, Ren'Py will break the dialogue up into blocks at blank lines. Each block is then used to create its own say statement. Here's an example, with three blocks of narration followed by three lines of dialogue:
+
+"""
+This is the first line of narration. It's longer than the other two
+lines, so it has to wrap.
+
+This is the second line of narration.
+
+This is the third line of narration.
+"""
+
+e """
+This is the first line of dialogue. It's longer than the other two
+lines, so it has to wrap.
+
+This is the second line of dialogue.
+
+This is the third line of dialogue.
+"""
+While additional clauses like arguments or attributes are allowed, they are passed to each line in the monologue, which may be less useful.
+
+If you'd like to omit the spaces between the blocks, write rpy monologue single at the top level of the file, before the first monologue line.
+
+If you'd like to disable this instead, and have all the lines you write between triple quotes be displayed as a single message, conserving line breaks, you can do it with rpy monologue none.
+
+The character Storelink
+Main article: Other Named Stores
+
+The say statement will search the character named store before the default store. If you want to have a character with the same name as a variable in the default store, it can be defined using:
+
+define character.e = Character("Eileen")
+This character can then be used alongside a variable in the default store:
+
+default e = 0
+
+label start:
+
+    # This is still a terrible variable name.
+    $ e = 100
+
+    e "Our current energy is [e] units."
+This is especially useful in order to manage variable information about a character in a namespace without conflicting with the say statement:
+
+define character.naomi = Character("Naomi Nagata", who_color="#8c8")
+default naomi = PersonClass(engineering=5, max_g_force=.7) # can be an object...
+define character.fred = Character("Fred Johnson", who_color="#72f")
+default fred.money = 1000 # ...or a dedicated named store
+default fred.rank = "Colonel"
+
+label traded:
+    fred "Here you go."
+    $ fred.money -= 50
+    $ naomi.money += 50
+    naomi "Thanks ! I knew you would value my class-[naomi.engineering] engineering skills."
+
+
+NVL-Mode Tutoriallink
+There are two main styles of presentation used for visual novels. ADV-style games present dialogue and narration one line at a time, generally in a window at the bottom of the screen. NVL-style games present multiple lines on the screen at a time, in a window that takes up the entire screen.
+
+In this tutorial, we will explain how to make an NVL-mode game using Ren'Py. This tutorial assumes that you are already familiar with the basics of Ren'Py, as explained in the Quickstart manual.
+
+Getting Startedlink
+NVL-mode can be added to a Ren'Py script in two steps. The first is to declare the characters to use NVL-mode, and the second is to add nvl clear statements at the end of each page.
+
+Characters can be declared to use NVL-mode by adding a kind=nvl parameter to each of the Character declarations. For example, if we use the character declarations from the Quickstart manual:
+
+define s = Character('Sylvie', color="#c8ffc8")
+define m = Character('Me', color="#c8c8ff")
+Changed to use NVL-mode, those declarations become:
+
+define s = Character('Sylvie', kind=nvl, color="#c8ffc8")
+define m = Character('Me', kind=nvl, color="#c8c8ff")
+An NVL-mode narrator can also be used by including the following definition:
+
+define narrator = nvl_narrator
+Note that we have also added an NVL-mode declaration of narrator. The narrator character is used to speak lines that do not have another character name associated with it.
+
+If we ran the game like this, the first few lines would display normally, but after a while, lines would begin displaying below the bottom of the screen. To break the script into pages, include an nvl clear statement after each page.
+
+The following is an example script with pagination:
+
+label start:
+    "I'll ask her..."
+
+    m "Um... will you..."
+    m "Will you be my artist for a visual novel?"
+
+    nvl clear
+
+    "Silence."
+    "She is shocked, and then..."
+
+    s "Sure, but what is a \"visual novel?\""
+
+    nvl clear
+While nvl-mode games generally have more text per paragraph, this example demonstrates a basic NVL-mode script. (Suitable for use in a kinetic novel that does not have transitions.)
+
+Monologue mode works with NVL-mode as well. Including the {clear} text tag on a line by itself is the equivalent of an nvl clear statement without leaving monologue mode. For example:
+
+label start:
+    s """
+    This is one block of text in monologue mode.
+
+    This is a second block, on the same page as the first.
+
+    {clear}
+
+    The page just cleared!
+    """
+NVL-mode Menuslink
+By default, menus are displayed in ADV-mode, taking up the full screen. There is also an alternate NVL-mode menu presentation, which displays the menus immediately after the current page of NVL-mode text.
+
+To access this alternate menu presentation, write:
+
+define menu = nvl_menu
+The menu will disappear after the choice has been made, so it usually makes sense to follow menus with an "nvl clear" or some sort of indication as to the choice.
+
+Menu arguments can also be used to access a NVL-mode menu. This is done by providing a true nvl argument that is set to True. This is useful when mixing NVL-mode and ADV-mode menus in a single game.
+
+menu (nvl=True):
+    "I prefer NVL-mode.":
+        pass
+
+    "ADV-mode is more for me.":
+        pass
+Showing and Hiding the NVL-mode Windowlink
+The NVL-mode window can be controlled with the standard window show and window hide statements. To select the default transitions to be used for showing and hiding the window, add the following to your game:
+
+init python:
+    config.window_hide_transition = dissolve
+    config.window_show_transition = dissolve
+The default config.empty_window should select appropriate window automatically, but setting config.empty_window to nvl_show_core will force the NVL-mode window to be displayed during a transition.:
+
+init python:
+    config.empty_window = nvl_show_core
+An example of using the window commands to show and hide the window is:
+
+label meadow:
+
+    nvl clear
+
+    window hide
+    scene bg meadow
+    with fade
+    window show
+
+    "We reached the meadows just outside our hometown. Autumn was so
+     beautiful here."
+    "When we were children, we often played here."
+
+    m "Hey... ummm..."
+
+    window hide
+    show sylvie smile
+    with dissolve
+    window show
+
+    "She turned to me and smiled."
+    "I'll ask her..."
+    m "Ummm... will you..."
+    m "Will you be my artist for a visual novel?"
+There are also explicit nvl show and nvl hide commands that show hide the NVL-mode window. These take an optional transition, and can be used in games that use a mix of NVL-mode and ADV-mode windows.
+
+Customizing Characterslink
+NVL-mode characters can be customized to have several looks, hopefully allowing you to pick the one that is most appropriate to the game you are creating.
+
+The default look has a character's name to the left, and dialogue indented to the right of the name. The color of the name is controlled by the ''color'' parameter.
+
+define s = Character('Sylvie', kind=nvl, color="#c8ffc8")
+A second look has the character's name embedded in with the text. Dialogue spoken by the character is enclosed in quotes. Note that here, the character's name is placed in the ''what_prefix'' parameter, along with the open quote. (The close quote is placed in the ''what_suffix'' parameter.)
+
+define s = Character(None, kind=nvl, what_prefix="Sylvie: \"",
+                     what_suffix="\"")
+A third look dispenses with the character name entirely, while putting the dialogue in quotes.
+
+define s = Character(None, kind=nvl, what_prefix="\"", what_suffix="\"")
+Since the third look might make it hard to distinguish who's speaking, we can tint the dialogue using the ''what_color'' parameter.
+
+define s = Character(None, kind=nvl, what_prefix="\"", what_suffix="\"",
+                     what_color="#c8ffc8")
+Of course, a completely uncustomized NVL-mode character can be used, if you want to take total control of what is shown. (This is often used for the narrator.)
+
+define s = Character(None, kind=nvl)
+Config Variableslink
+The following config variables control nvl-related functionality.
+
+define config.nvl_layer = "screens"link
+The layer the nvl screens are shown on.
+
+define config.nvl_list_length = Nonelink
+If not None, the maximum length of the the list of NVL dialogue. This can be set (often in conjuction with forcing the dialogue to have a fixed height) in order to emulate an infinite scrolling NVL window.
+
+define config.nvl_page_ctc = Nonelink
+If not None, this is the click-to-continue indicator that is used for NVL mode characters that are at the end of a page. (That is, immediately followed by an nvl clear statement.) This replaces the ctc parameter of Character().
+
+define config.nvl_page_ctc_position = "nestled"link
+If not None, this is the click-to-continue indicator position that is used for NVL mode characters that are at the end of a page. (That is, immediately followed by an nvl clear statement.) This replaces the ctc_position parameter of Character().
+
+define config.nvl_paged_rollback = Falselink
+If true, NVL-mode rollback will occur a full page at a time.
+
+Python Functionslink
+nvl_clear()link
+The Python equivalent of the nvl clear statement.
+
+nvl_hide(with_)link
+The Python equivalent of the nvl hide statement.
+
+with_
+The transition to use to hide the NVL-mode window.
+
+nvl_menu(items)link
+A Python function that displays a menu in NVL style. This is rarely used directly. Instead, it's assigned to the menu variable, using something like:
+
+define menu = nvl_menu
+nvl_show(with_)link
+The Python equivalent of the nvl show statement.
+
+with_
+The transition to use to show the NVL-mode window.
+
+Paged Rollbacklink
+Paged rollback causes Ren'Py to rollback one NVL-mode page at a time, rather than one block of text at a time. It can be enabled by including the following in your script.
+
+init python:
+    config.nvl_paged_rollback = True
+Script of The Question (NVL-mode Edition)link
+You can view the full script of the NVL-mode edition of ''The Question'' here.
+
+Speech Bubbleslink
+Ren'Py supports dialogue that's displayed in speech bubbles, which can be interactively positioned on the screen. This provides an alternative to the textboxes used by ADV-style games, and the full screen dialogue used by NVL-mode.
+
+To use speech bubbles your game, you'll have to define Characters with an image tag, a kind of bubble. For example,
+
+define e = Character(None, image="eileen", kind=bubble) # Eileen
+define l = Character(None, image="lucy", kind=bubble)   # Lucy
+While a name is supported, in general the speaking character will be implied by the tails of the bubble, so the name can be omitted.
+
+You may then use these characters to write dialogue normally.
+
+To position the balloons, hit shift+B to display the speech bubble editor. For each character that has a speech balloon, this will have two buttons in it.
+
+Pressing the area button will launch the speech bubble editor. This editor lets you drag to select the area where the speech bubble will be placed, on a grid. When you complete the drag, the speech bubble will will change locations.
+
+Pressing the properties buttons will select between sets of properties associated with the speech bubble. For the default speech bubble, the different properties control the position of the speech bubble tail.
+
+Once you've changed the area or properties for a character (or group of characters with the same image tage), those properties remain set until changed again, or until the next scene statement.
+
+When the area or properties are being set on the current line of dialogue, the corresponding line is brighter. If the values are being inherited from a prior line of dialogue or the default, the button is dimmed out. Right clicking on a button will prevent the current line from setting the value.
+
+Tipslink
+The speech bubbles use the same identifiers used by the translation system, see the Translation Tips for more information about them. These identifiers can change if:
+
+The text of a line changes.
+
+Another line with the same text inside the same label is added or removed.
+
+A label before the line is added or removed (however, adding or removing a label with the hide clause will not change the translation identifier).
+
+If you edit a scene, it's suggested that you replay through it to make sure the changes did not affect speech bubble placement.
+
+Configuration Variableslink
+The speech bubble system is controlled by variables in the bubble namespace, and by the bubble screen and its associated styles.
+
+The bubble namespace contains the following variables:
+
+bubble.db_filename = "bubble.json"link
+The database file, stored in the game directory, that contains the speech bubble information.
+
+bubble.cols = 24link
+The granularity of the grid that's used to position and size speech bubbles, in the horizontal direction.
+
+bubble.rows = 24link
+The granularity of the grid that's used to position and size speech bubbles, in the vertical direction.
+
+bubble.default_area = (15, 1, 8, 5)link
+This is the default area that speech bubbles are placed in, if no other area is specified. This is a tuple of the form (x, y, w, h), where each value is a number of grid cells.
+
+bubble.properties = { ... }link
+These are properties, apart from the area, that can be used to customize the speech bubble. This is a map from the name of a set of proprerties to a dictionary of properties and values. These properties supersede those given to the character, and are then supplied to the bubble screen.
+
+This uses the same prefixing system as Character() does. Properties beginning with window_ have the prefix removed, and are passed to the displayable with id "window" in the bubble screen, which is the bubble itself. Properties with what_ have the prefix removed, and are passed to the displayable with id "what" in the bubble screen, which is the text of the bubble. Properties with who_ are handled similarly, and given to the characters name. Properties with show_ are given as arguments to the bubble screen itself.
+
+In a new game, screens.rpy includes:
+
+define bubble.frame = Frame("gui/bubble.png", 55, 55, 55, 95)
+
+define bubble.properties = {
+    "bottom_left" : {
+        "window_background" : Transform(bubble.frame, xzoom=1, yzoom=1),
+        "window_bottom_padding" : 27,
+    },
+
+    "bottom_right" : {
+        "window_background" : Transform(bubble.frame, xzoom=-1, yzoom=1),
+        "window_bottom_padding" : 27,
+    },
+
+    "top_left" : {
+        "window_background" : Transform(bubble.frame, xzoom=1, yzoom=-1),
+        "window_top_padding" : 27,
+    },
+
+    "top_right" : {
+        "window_background" : Transform(bubble.frame, xzoom=-1, yzoom=-1),
+        "window_top_padding" : 27,
+    },
+}
+The bubble.frame variable is just used to make defining bubble.properties easier. Then for each of the four styles of bubble, the bubble is flipped so the tail is in the right place, and the padding is adjusted to leave room for the tail.
+
+bubble.properties_order = [ ]link
+This is a list of the names of the sets of properties, in the order they should be cycled through in the speech bubble editor. If the names of the sets of properties are not given, the properties are cycled through in alphabetical order.
+
+bubble.expand_area = { ... }link
+This is a map from the name of a set of properties to a (left, top, right, bottom) tuple. If found in this set, the area of the speech bubble is expanded by the given number of pixels.
+
+This makes the speech bubble bigger than the area the creator dragged out. The intent is that this can be used to drag out the body of the speech bubble without concern for the tail, and also for the text itself to stay put when the set of properties is changed and the tail moves.
+
+By default, this is:
+
+define bubble.expand_area = {
+    "bottom_left" : (0, 0, 0, 22),
+    "bottom_right" : (0, 0, 0, 22),
+    "top_left" : (0, 22, 0, 0),
+    "top_right" : (0, 22, 0, 0),
+}
+Bubble Screenlink
+The default bubble screen can be found in screens.rpy, and is similar to the default say screen:
+
+screen bubble(who, what):
+    style_prefix "bubble"
+
+    window:
+        id "window"
+
+        if who is not None:
+
+            window:
+                id "namebox"
+                style "bubble_namebox"
+
+                text who:
+                    id "who"
+
+        text what:
+            id "what"
+It's separate from the say screen as it uses its own set of styles, including bubble_window, bubble_what, bubble_namebox, and bubble_who. These styles can be customized directly to avoid having to set a property in all of the sets of properties in bubble.properties.
+
+Adding Bubble Support to a Gamelink
+Games made before the release of Ren'Py 8.1 won't include the default screens and settings required for the speech bubble system. There are two things you need to do to fix this. First, download:
+
+https://raw.githubusercontent.com/renpy/renpy/master/gui/game/gui/bubble.png
+
+https://raw.githubusercontent.com/renpy/renpy/master/gui/game/gui/thoughtbubble.png
+
+And place the files in the game/gui directory of your game. Then, add this to the end of screens.rpy:
+
+## Bubble screen ###############################################################
+##
+## The bubble screen is used to display dialogue to the player when using
+## speech bubbles. The bubble screen takes the same parameters as the say
+## screen, must create a displayable with the id of "what", and can create
+## displayables with the "namebox", "who", and "window" ids.
+##
+## https://www.renpy.org/doc/html/bubble.html#bubble-screen
+
+screen bubble(who, what):
+    style_prefix "bubble"
+
+    window:
+        id "window"
+
+        if who is not None:
+
+            window:
+                id "namebox"
+                style "bubble_namebox"
+
+                text who:
+                    id "who"
+
+        text what:
+            id "what"
+
+style bubble_window is empty
+style bubble_namebox is empty
+style bubble_who is default
+style bubble_what is default
+
+style bubble_window:
+    xpadding 30
+    top_padding 5
+    bottom_padding 5
+
+style bubble_namebox:
+    xalign 0.5
+
+style bubble_who:
+    xalign 0.5
+    textalign 0.5
+    color "#000"
+
+style bubble_what:
+    align (0.5, 0.5)
+    text_align 0.5
+    layout "subtitle"
+    color "#000"
+
+define bubble.frame = Frame("gui/bubble.png", 55, 55, 55, 95)
+define bubble.thoughtframe = Frame("gui/thoughtbubble.png", 55, 55, 55, 55)
+
+define bubble.properties = {
+    "bottom_left" : {
+        "window_background" : Transform(bubble.frame, xzoom=1, yzoom=1),
+        "window_bottom_padding" : 27,
+    },
+
+    "bottom_right" : {
+        "window_background" : Transform(bubble.frame, xzoom=-1, yzoom=1),
+        "window_bottom_padding" : 27,
+    },
+
+    "top_left" : {
+        "window_background" : Transform(bubble.frame, xzoom=1, yzoom=-1),
+        "window_top_padding" : 27,
+    },
+
+    "top_right" : {
+        "window_background" : Transform(bubble.frame, xzoom=-1, yzoom=-1),
+        "window_top_padding" : 27,
+    },
+
+    "thought" : {
+        "window_background" : bubble.thoughtframe,
+    }
+}
+
+define bubble.expand_area = {
+    "bottom_left" : (0, 0, 0, 22),
+    "bottom_right" : (0, 0, 0, 22),
+    "top_left" : (0, 22, 0, 0),
+    "top_right" : (0, 22, 0, 0),
+    "thought" : (0, 0, 0, 0),
+}
+
+
+Text Inputlink
+With some limitations, Ren'Py can prompt the user to input a small amount of text. This prompting is done by the renpy.input() function, which returns the entered text, allowing it to be saved in a variable or otherwise processed.
+
+On Linux, text input is limited to languages that do not require input method (IME) support. Most Western languages should work, but Chinese, Japanese, and Korean probably won't.
+
+The renpy.input function is defined as:
+
+renpy.input(prompt, default='', allow=None, exclude='{}', length=None, with_none=None, pixel_width=None, screen='input', mask=None, copypaste=True, multiline=False, **kwargs)link
+Calling this function pops up a window asking the player to enter some text. It returns the entered text.
+
+prompt
+A string giving a prompt to display to the player.
+
+default
+A string giving the initial text that will be edited by the player.
+
+allow
+If not None, a string giving a list of characters that will be allowed in the text.
+
+exclude
+If not None, if a character is present in this string, it is not allowed in the text.
+
+length
+If not None, this must be an integer giving the maximum length of the input string.
+
+pixel_width
+If not None, the input is limited to being this many pixels wide, in the font used by the input to display text.
+
+screen
+The name of the screen that takes input. If not given, the input screen is used.
+
+mask
+If not None, a single-character string that replaces the input text that is shown to the player, such as to conceal a password.
+
+copypaste
+When true, copying from and pasting to this input is allowed.
+
+multiline
+When true, move caret to next line is allowed.
+
+If config.disable_input is True, this function only returns default.
+
+Keywords prefixed with show_ have the prefix stripped and are passed to the screen.
+
+Due to limitations in supporting libraries, on Android and the web platform this function is limited to alphabetic characters.
+
+Games that use renpy.input will often want to process the result further, using standard Python string manipulation functions. For example, the following will ask the player for his or her name and remove leading or trailing whitespace. If the name is empty, it will be replaced by a default name. Finally, it is displayed to the user.
+
+define pov = Character("[povname]")
+
+python:
+    povname = renpy.input("What is your name?", length=32)
+    povname = povname.strip()
+
+    if not povname:
+         povname = "Pat Smith"
+
+pov "My name is [povname]!"
+In this, the length of the input is limited to 32 characters. It's important to test your game with long names, to makes sure that those names do not break text layout. At the same time, too short fields may prevent people from entering their preferred name.
+
+
+Side Imageslink
+Many visual novels include a picture of the character that is speaking as part of their interface. Ren'Py calls this image a side image, and has support for automatically selecting and displaying a side image as part of the dialogue.
+
+The side image support assumes that a Character() is declared with a linked image tag:
+
+define e = Character("Eileen", image="eileen")
+When a character with a linked image tag speaks, Ren'Py creates a pool of image attributes. The linked image tag is added to this pool, as are the current image attributes that are associated with that tag.
+
+In addition to the tag, there must be at least one attribute in the pool. If not, no side image is shown.
+
+To determine the side image associated with a tag, Ren'Py tries to find an image with the tag "side", and the largest number of attributes from the pool. If no image can be found, or more than one image has the same number of attributes, a Null is shown instead.
+
+For example, say we have the following script:
+
+define e = Character("Eileen", image="eileen")
+
+image eileen happy = "eileen_happy.png"
+image eileen concerned = "eileen_concerned.png"
+
+image side eileen happy = "side_eileen_happy.png"
+image side eileen = "side_eileen.png"
+
+label start:
+
+    show eileen happy
+
+    e "Let's call this line Point A."
+
+    e concerned "And this one is point B."
+At point A, the character e is speaking, which is linked to the image tag "eileen". The "eileen happy" image is showing, so the pool of attributes is "eileen" and "happy". We look for an image with the "side" tag, and as many of those attributes as possible – and we match "side eileen happy", which is the side image Ren'Py will display.
+
+At point B, the "eileen concerned" image is showing. The pool of attributes is now "eileen" and "concerned". The only matching image is "side eileen", so that's what Ren'Py selects. If there was a "side concerned" image, there would be ambiguity, and Ren'Py wouldn't display an image.
+
+Invisible Characterslink
+Another use of the side image is to show an image of the player character, when that character has dialogue. The way to do this is to link an image to the character, and then use the say with attributes construct to select the side image to show.
+
+For example:
+
+define p = Character("Player", image="player")
+
+image side player happy = "side_player_happy.png"
+image side player concerned = "side_player_concerned.png"
+
+label start:
+
+    p happy "This is shown with the 'side player happy' image."
+
+    p "This is also shown with 'side player happy'."
+
+    p concerned "This is shown with 'side player concerned'."
+Config and Store Variableslink
+There are a number of attributes of side images that can be controlled using config variables.
+
+_side_image_tag = Nonelink
+define config.side_image_tag = Nonelink
+If _side_image_tag is not None, it takes precedence over config.side_image_tag.
+
+If this is given, then the side image will track the given image tag, rather than the image associated with the currently speaking character. For example,
+
+define e = Character("Eileen", image="eileen")
+define config.side_image_tag = "eileen"
+Will make the side image track the "eileen" image tag, which is associated with the e character.
+
+define config.side_image_only_not_showing = Falselink
+When set to true, the side image will only show if an image with that tag is not already being shown on the screen.
+
+_side_image_prefix_tag = Nonelink
+define config.side_image_prefix_tag = 'side'link
+If _side_image_prefix_tag is not None, it takes preference over config.side_image_prefix_tag.
+
+The prefix that is used when searching for a side image.
+
+define config.side_image_null = Null()link
+The Null displayable to use when not displaying a side image. This can be changed, but only to other Null objects. One reason for doing so would be to set the side of the Null (eg. Null(width=200, height=150)) to prevent dissolves from being cut off.
+
+define config.side_image_same_transform = Nonelink
+If not None, a transform that is used when the new side image shares the same image tag as the previous side image.
+
+define config.side_image_change_transform = Nonelink
+If not None, a transform that is used when the new side image does not share the name image tag (or one of the new or old side images does not exist).
+
+Transforms and Transitionslink
+The config.side_image_same_transform and config.side_image_change_transform transforms are called with two arguments – old and new side image displayables – each time the side image is displayed. These can be used to move around side images, or use a transition to go between side images.
+
+This causes the side image to slide in and out when the character associated with that image changes:
+
+transform change_transform(old, new):
+    contains:
+        old
+        yalign 1.0
+        xpos 0.0 xanchor 0.0
+        linear 0.2 xanchor 1.0
+    contains:
+        new
+        yalign 1.0
+        xpos 0.0 xanchor 1.0
+        linear 0.2 xanchor 0.0
+
+define config.side_image_change_transform = change_transform
+This is used to dissolve between old and new side images when the character remains the same. (For example, when the character changes emotion.) For the Dissolve to work correctly, both side images must be the same size.
+
+transform same_transform(old, new):
+    old
+    new with Dissolve(0.2, alpha=True)
+
+define config.side_image_same_transform = same_transform
+When the SideImage() is scaled down, it might make sense to enable mipmapping in the Dissolve():
+
+transform same_transform(old, new):
+    old
+    new with Dissolve(0.2, alpha=True, mipmap=True)
+
+define config.side_image_same_transform = same_transform
+Functionslink
+renpy.get_side_image(prefix_tag, image_tag=None, not_showing=None, layer=None)link
+This attempts to find an image to show as the side image.
+
+It begins by determining a set of image attributes. If image_tag is given, it gets the image attributes from the tag. Otherwise, it gets them from the currently showing character. If no attributes are available for the tag, this returns None.
+
+It then looks up an image with the tag prefix_tag, and the image tage (either from image_tag or the currently showing character) and the set of image attributes as attributes. If such an image exists, it's returned.
+
+If not_showing is True, this only returns a side image if the image the attributes are taken from is not on the screen. If Nome, the value is taken from config.side_image_only_not_showing.
+
+If layer is None, uses the default layer for the currently showing tag.
+
+renpy.set_tag_attributes(name, layer=None)link
+This sets the attributes associated with an image tag when that image tag is not showing. The main use of this would be to directly set the attributes used by a side image.
+
+For example:
+
+$ renpy.set_tag_attributes("lucy mad")
+$ renpy.say(l, "I'm rather cross.")
+and:
+
+l mad "I'm rather cross."
+are equivalent.
+
+Image Gallery, Music Room, and Replay Actionslink
+Image Gallerylink
+A image gallery is a screen that allows the player to unlock images, and then view those images. The screen has one or more buttons associated with it, and each button has one or more associated images. Buttons and images also have conditions that determine if they have unlocked.
+
+Image galleries are managed by instances of the Gallery class. A single instance of the gallery class may be shared between multiple image gallery screens.
+
+A gallery has one or more buttons associated with it, a button has one or more images associated with it, and each image has one or more displayables associated with it. Conditions can be assigned to buttons and images. A button is unlocked when all of the conditions associated with it are satisfied and at least one image associated with that button is unlocked. An image is unlocked when all associated conditions are satisfied.
+
+Creating an image gallery consists of the following four steps.
+
+Create an instance of Gallery.
+
+Add buttons and images to that gallery, along with conditions that determine if the buttons and images they belong to are unlocked. This is also a multi-step process.
+
+Declare a new button by calling Gallery.button().
+
+Optionally, add one or more unlock conditions to the button by calling Gallery.unlock() or Gallery.condition().
+
+Declare an image by calling Gallery.image() with one or more displayables as arguments. Or call the convenience method Gallery.unlock_image() instead.
+
+Optionally, call Gallery.transform() to associate transforms with the displayables.
+
+Optionally, add one or more unlock conditions to the image by calling Gallery.unlock(), Gallery.condition(), or Gallery.allprior().
+
+Additional images can be added to a button by repeating steps 3-5, while additional buttons can be added to the gallery by repeating all five steps.
+
+Create an image gallery screen. The screen should display a background, and should contain navigation that allows the user to show other image galleries, or to return to the main or extras menu.
+
+Add a way to display the image gallery screen to the main or extras menu.
+
+Here's an example:
+
+init python:
+
+    # Step 1. Create the gallery object.
+    g = Gallery()
+
+    # Step 2. Add buttons and images to the gallery.
+
+    # A button with an image that is always unlocked.
+    g.button("title")
+    g.image("title")
+
+    # A button that contains an image that automatically unlocks.
+    g.button("dawn")
+    g.image("dawn1")
+    g.unlock("dawn1")
+
+    # This button has multiple images assocated with it. We use unlock_image
+    # so we don't have to call both .image and .unlock. We also apply a
+    # transform to the first image.
+    g.button("dark")
+    g.unlock_image("bigbeach1")
+    g.transform(slowpan)
+    g.unlock_image("beach1 mary")
+    g.unlock_image("beach2")
+    g.unlock_image("beach3")
+
+    # This button has a condition associated with it, allowing the game
+    # to choose which images unlock.
+    g.button("end1")
+    g.condition("persistent.unlock_1")
+    g.image("transfer")
+    g.image("moonpic")
+    g.image("girlpic")
+    g.image("nogirlpic")
+    g.image("bad_ending")
+
+    g.button("end2")
+    g.condition("persistent.unlock_2")
+    g.image("library")
+    g.image("beach1 nomoon")
+    g.image("bad_ending")
+
+    # The last image in this button has an condition associated with it,
+    # so it will only unlock if the user gets both endings.
+    g.button("end3")
+    g.condition("persistent.unlock_3")
+    g.image("littlemary2")
+    g.image("littlemary")
+    g.image("good_ending")
+    g.condition("persistent.unlock_3 and persistent.unlock_4")
+
+    g.button("end4")
+    g.condition("persistent.unlock_4")
+    g.image("hospital1")
+    g.image("hospital2")
+    g.image("hospital3")
+    g.image("heaven")
+    g.image("white")
+    g.image("good_ending")
+    g.condition("persistent.unlock_3 and persistent.unlock_4")
+
+    # The final two buttons contain images that show multiple pictures
+    # at the same time. This can be used to compose character art onto
+    # a background.
+    g.button("dawn mary")
+    g.unlock_image("dawn1", "mary dawn wistful")
+    g.unlock_image("dawn1", "mary dawn smiling")
+    g.unlock_image("dawn1", "mary dawn vhappy")
+
+    g.button("dark mary")
+    g.unlock_image("beach2", "mary dark wistful")
+    g.unlock_image("beach2", "mary dark smiling")
+    g.unlock_image("beach2", "mary dark vhappy")
+
+    # The transition used when switching images.
+    g.transition = dissolve
+
+# Step 3. The gallery screen we use.
+screen gallery:
+
+    # Ensure this replaces the main menu.
+    tag menu
+
+    # The background.
+    add "beach2"
+
+    # A grid of buttons.
+    grid 3 3:
+
+        xfill True
+        yfill True
+
+        # Call make_button to show a particular button.
+        add g.make_button("dark", "gal-dark.png", xalign=0.5, yalign=0.5)
+        add g.make_button("dawn", "gal-dawn.png", xalign=0.5, yalign=0.5)
+        add g.make_button("end1", "gal-end1.png", xalign=0.5, yalign=0.5)
+
+        add g.make_button("end2", "gal-end2.png", xalign=0.5, yalign=0.5)
+        add g.make_button("end3", "gal-end3.png", xalign=0.5, yalign=0.5)
+        add g.make_button("end4", "gal-end4.png", xalign=0.5, yalign=0.5)
+
+        add g.make_button("dark mary", "gal-dark_mary.png", xalign=0.5, yalign=0.5)
+        add g.make_button("dawn mary", "gal-dawn_mary.png", xalign=0.5, yalign=0.5)
+        add g.make_button("title", "title.png", xalign=0.5, yalign=0.5)
+
+
+        # The screen is responsible for returning to the main menu. It could also
+        # navigate to other gallery screens.
+        textbutton "Return" action Return() xalign 0.5 yalign 0.5
+Step 4 will vary based on how your game is structured, but one way of accomplishing it is to add the following line:
+
+textbutton "Gallery" action ShowMenu("gallery")
+to the main menu screen.
+
+classGallerylink
+This class supports the creation of an image gallery by handling the locking of images, providing an action that can show one or more images, and a providing method that creates buttons that use that action.
+
+transitionlink
+The transition that is used when changing images.
+
+locked_buttonlink
+The default displayable used by make_button for a locked button.
+
+hover_borderlink
+The default hover border used by make_button.
+
+idle_borderlink
+The default idle border used by make_button.
+
+unlocked_advancelink
+If true, the gallery will only advance through unlocked images.
+
+navigationlink
+If true, the gallery will display navigation and slideshow buttons on top of the images.
+
+To customize the look of the navigation, you may override the gallery_navigation screen. The default screen is defined in renpy/common/00gallery.rpy
+
+span_buttonslink
+If true, the gallery will advance between buttons.
+
+slideshow_delaylink
+The time it will take for the gallery to advance between images in slideshow mode.
+
+image_screen = "_gallery"
+The screen that is used to show individual images in this gallery. This screen is supplied the following keyword arguments:
+
+locked
+True if the image is locked.
+
+displayables
+A list of transformed displayables that should be shown to the user.
+
+index
+A 1-based index of the image being shown.
+
+count
+The number of images attached to the current button.
+
+gallery
+The image gallery object.
+
+Additional arguments may be supplied by prefixing them with show_ in calls to Gallery.image and Gallery.unlock image.
+
+The default screen is defined at the bottom of renpy/common/00gallery.rpy.
+
+Action(name)link
+An action that displays the images associated with the given button name.
+
+Next(unlocked=False)link
+Advances to the next image in the gallery.
+
+unlocked
+If true, only considers unlocked images.
+
+Previous(unlocked=False)link
+Goes to the previous image in the gallery.
+
+unlocked
+If true, only considers unlocked images.
+
+Return()link
+Stops displaying gallery images.
+
+ToggleSlideshow()link
+Toggles slideshow mode.
+
+allprior()link
+A condition that is true if all prior images associated with the current button have been unlocked.
+
+button(name)link
+Creates a new button, named name.
+
+name
+The name of the button being created.
+
+condition(expression)link
+A condition that is satisfied when an expression evaluates to true.
+
+expression
+A string giving a Python expression.
+
+get_fraction(name, format='{seen}/{total}')link
+Returns a text string giving the number of unlocked images and total number of images in the button named name.
+
+format
+A Python format string that's used to format the numbers. This has three values that can be substituted in:
+
+{seen}
+The number of images that have been seen.
+
+{total}
+The total number of images in the button.
+
+{locked}
+The number of images that are still locked.
+
+image(*displayables, **properties)link
+Adds a new image to the current button, where an image consists of one or more displayables.
+
+Properties beginning with show_ have that prefix stripped off, and are passed to the gallery.image_screen screen as additional keyword arguments.
+
+make_button(name, unlocked, locked=None, hover_border=None, idle_border=None, style=None, **properties)link
+This creates a button that displays the images associated with the given button name.
+
+name
+The name of the button that will be created.
+
+unlocked
+A displayable that is displayed for this button when it is unlocked.
+
+locked
+A displayable that is displayed for this button when it is locked. If None, the locked_button field of the gallery object is used instead.
+
+hover_border
+A displayable that is used to overlay this button when it is unlocked and has focus. If None, the hover_border field of the gallery object is used.
+
+idle_border
+A displayable that is used to overlay this button when it is unlocked but unfocused. If None, the idle_border field of the gallery object is used.
+
+style
+The style the button inherits from. When None, defaults to the "empty" style, so as not to inherit borders and so on.
+
+Additional keyword arguments become style properties of the created button object.
+
+transform(*transforms)link
+Applies transforms to the last image registered. This should be called with the same number of transforms as the image has displayables. The transforms are applied to the corresponding displayables.
+
+If a transform is None, the default transform is used.
+
+unlock(*images)link
+A condition that takes one or more image names as argument, and is satisfied when all the named images have been seen by the player. The image names should be given as strings.
+
+unlock_image(*images, **properties)link
+A convenience method that is equivalent to calling image and unlock with the same parameters. (Keyword arguments beginning with show_ are only passed to image.) This will cause an image to be displayed if it has been seen before.
+
+The images should be specified as strings giving image names.
+
+Music Roomlink
+A music room is a screen that allows the user to select and play music tracks from the game. These tracks may start off locked when the user first begins playing a particular game, and will be unlocked as the user listens to the music while playing the game.
+
+A music room is managed by an instance of the MusicRoom class. There can be more than one MusicRoom instance in a game, allowing a game to have multiple music rooms. Creating a music room consists of the following four steps:
+
+Create an instance of MusicRoom. The MusicRoom constructor takes parameters to control the channel on which music is played back, and how long it takes to fade music out and back in.
+
+Add music files to the instance.
+
+Create a screen that uses the MusicRoom instance to create actions for buttons, imagebuttons, or hotspots. These actions can pick a track, the next or previous track, or stop and start the music.
+
+Note that the actions used are members of a MusicRoom instance, so if the MusicRoom instance is named mr, then mr.Play("track1.ogg") is how you'd use the play action.
+
+Add the music room screen to the main menu, or an extras menu.
+
+Here's an example:
+
+init python:
+
+    # Step 1. Create a MusicRoom instance.
+    mr = MusicRoom(fadeout=1.0)
+
+    # Step 2. Add music files.
+    mr.add("track1.ogg", always_unlocked=True)
+    mr.add("track2.ogg")
+    mr.add("track3.ogg")
+
+
+# Step 3. Create the music room screen.
+screen music_room:
+
+    tag menu
+
+    frame:
+        has vbox
+
+        # The buttons that play each track.
+        textbutton "Track 1" action mr.Play("track1.ogg")
+        textbutton "Track 2" action mr.Play("track2.ogg")
+        textbutton "Track 3" action mr.Play("track3.ogg")
+
+        null height 20
+
+        # Buttons that let us advance tracks.
+        textbutton "Next" action mr.Next()
+        textbutton "Previous" action mr.Previous()
+
+        null height 20
+
+        # The button that lets the user exit the music room.
+        textbutton "Main Menu" action ShowMenu("main_menu")
+
+    # Start the music playing on entry to the music room.
+    on "replace" action mr.Play()
+
+    # Restore the main menu music upon leaving.
+    on "replaced" action Play("music", "track1.ogg")
+Step 4 will vary based on how your game is structured, but one way of accomplishing it is to add the following line:
+
+textbutton "Music Room" action ShowMenu("music_room")
+to the main menu screen.
+
+Using the Preferences() function, especially Preferences("music volume"), it's possible to include a volume slider on the music screen.
+
+classMusicRoom(channel='music', fadeout=0.0, fadein=0.0, loop=True, single_track=False, shuffle=False, stop_action=None)link
+A music room that contains a series of songs that can be unlocked by the user, and actions that can play entries from the list in order.
+
+channel
+The channel that this music room will operate on.
+
+fadeout
+The number of seconds it takes to fade out the old music when changing tracks.
+
+fadein
+The number of seconds it takes to fade in the new music when changing tracks.
+
+loop
+Determines if playback will loop or stop when it reaches the end of the playlist.
+
+single_track
+If true, only a single track will play. If loop is true, that track will loop. Otherwise, playback will stop when the track finishes.
+
+shuffle
+If true, the tracks are shuffled, and played in the shuffled order. If false, the tracks are played in the order they're added to the MusicRoom.
+
+stop_action
+An action to run when the music has stopped.
+
+Single_track and shuffle conflict with each other. Only one should be true at a time. (Actions that set single_track and shuffle enforce this.)
+
+Next()link
+An action that causes the music room to play the next unlocked file in the playlist.
+
+Play(filename=None)link
+This action causes the music room to start playing. If filename is given, that file begins playing. Otherwise, the currently playing file starts over (if it's unlocked), or the first file starts playing.
+
+If filename is given, buttons with this action will be insensitive while filename is locked, and will be selected when filename is playing.
+
+Previous()link
+An action that causes the music room to play the previous unlocked file in the playlist.
+
+RandomPlay()link
+This action causes the music room to start playing a randomly selected unlocked music track.
+
+SetLoop(value)link
+This action sets the value of the loop property.
+
+SetShuffle(value)link
+This action sets the value of the shuffle property.
+
+SetSingleTrack(value)link
+This action sets the value of the single_track property.
+
+Stop()link
+This action stops the music.
+
+ToggleLoop()link
+This action toggles the value of the loop property.
+
+TogglePause()link
+If music is playing, pauses or unpauses the music as appropriate.
+
+This button is selected when the music is paused.
+
+TogglePlay()link
+If no music is currently playing, this action starts playing the first unlocked track. Otherwise, stops the currently playing music.
+
+This button is selected when any music is playing.
+
+ToggleShuffle()link
+This action toggles the value of the shuffle property.
+
+ToggleSingleTrack()link
+This action toggles the value of the single_track property.
+
+add(filename, always_unlocked=False, action=None)link
+Adds the music file filename to this music room. The music room will play unlocked files in the order that they are added to the room.
+
+always_unlocked
+If true, the music file will be always unlocked. This allows the file to show up in the music room before it has been played in the game.
+
+action
+This is a action or the list of actions. these are called when this file is played.
+
+For example, These actions is used to change a screen or background, description by the playing file.
+
+is_unlocked(filename)link
+Returns true if the filename has been unlocked (or is always unlocked), and false if it is still locked.
+
+Replaylink
+Ren'Py also includes the ability to replay a scene from inside a the main or game menu. This can be used to create a "scene gallery", or memory gallery that allows the player to repeat important scenes. After the scene finishes, Ren'Py returns to the menu screen that launched the replay.
+
+Scene replay is also possible using the Start() action. The difference between the two modes are:
+
+A replay can be launched from any screen while Start can only be used in the main menu or screens shown by the main menu.
+
+When a replay finishes, control returns to the point where the replay was invoked. That point can be inside the main menu, game menu. If a game is in progress when replay is called, game state is preserved.
+
+Saving is disabled while in replay mode. Reloading, which requires saving, is also disabled.
+
+While in replay mode, a call to renpy.end_replay() will end the replay. In normal mode, end_replay does nothing.
+
+To take advantage of the replay mode, a scene should begin with a label, and end with a call to renpy.end_replay(). The scene should make no assumption as to the state of the layers or variables, which can be very different in normal and replay mode. (When a replay begins, the label is invoked with a black screen.)
+
+For example:
+
+
+
+     "And finally, I met the wizard himself."
+
+label meaning_of_life:
+
+     scene
+
+    "Mage" "What is the meaning of life, you say?"
+
+    "Mage" "I've thought about it long and hard. A long time, I've
+            spent pondering that very thing."
+
+    "Mage" "And I'll say - the answer - the meaning of life
+            itself..."
+
+    "Mage" "Is forty-three."
+
+    $ renpy.end_replay()
+
+    "Mage" "Something like that, anyway."
+With the scene define like that, the replay can be invoked with the Replay action:
+
+textbutton "The meaning of life" action Replay("meaning_of_life")
+There is one store variable used by replay mode:
+
+_in_replaylink
+When in replay mode, this is sent to the label at which replay mode was started. Outside of replay mode, this is None.
+
+In addition, config.enter_replay_transition and config.exit_replay_transition are used when entering and exiting replay mode, respectively. config.replay_scope adds variables to the cleaned store when entering a replay, and by default sets _game_menu_screen to cause right-clicking in a replay to default to showing the preferences screen.
+
+The following variables and actions are used in replay mode:
+
+EndReplay(confirm=True)link
+Ends the current replay.
+
+confirm
+If true, prompts the user for confirmation before ending the replay.
+
+Replay(label, scope={}, locked=None)link
+An action that starts label as a replay.
+
+scope
+A dictionary mapping variable name to value. These variables are set when entering the replay.
+
+locked
+If true, this action is insensitive and will not do anything when triggered. If false, it will behave normally. If None, it will be locked if the label has not been seen in any playthrough.
+
+renpy.call_replay(label, scope={})link
+Calls a label as a memory.
+
+Keyword arguments are used to set the initial values of variables in the memory context.
+
+renpy.end_replay()link
+If we're in a replay, ends the replay immediately. Otherwise, does nothing.
+
+Drag and Droplink
+Ren'Py includes drag and drop displayables that allow things to be moved around the screen with the mouse. Some of the uses of dragging are:
+
+Allowing windows to be repositioned by the user, storing the window positions.
+
+Card games that require cards to be dragged around the screen. (For example, solitaire.)
+
+Inventory systems.
+
+Drag-to-reorder systems.
+
+The drag and drop displayables make it possible to implement these and other uses of drag and drop. There are two classes involved here. The Drag class represents either something that can be dragged around the screen, something that can have a draggable dropped onto it, or something that can do both. The DragGroup class represents a group of Drags – for a drag and drop to occur, both Drags must be part of the same drag group.
+
+The drag and drop system can be used either through the Screen Language or directly as displayables. It makes sense to use the screen language when you don't need to refer to the Drags that you create after they've been created. This might be the case if the draggable represents a window that the user places on the screen. If you need to refer to the drags after they've been created, then it's often better to create Drags directly, and add them to a DragGroup.
+
+Droppinglink
+There are two ways Ren'Py can process a drop:
+
+If mouse_drop is true, the drag will be dropped onto the droppable that is directly below the mouse cursor.
+
+If mouse_drop is false, the default, the drop will occur onto the droppable that most fully overlaps with the drag.
+
+Unlike when starting a drag, where focus_mask is used, dropping considers the entire rectangular areas of the draggable and droppable, including any transparent pixels. You may need to design your drag and drop displayables to take this into account, by being generally rectangular in shape.
+
+Displayableslink
+classDrag(d=None, drag_name=None, draggable=True, droppable=True, drag_raise=True, dragging=None, dragged=None, dropped=None, drag_handle=(0.0, 0.0, 1.0, 1.0), drag_joined=..., clicked=None, hovered=None, unhovered=None, mouse_drop=False, **properties)link
+A displayable that represents an object that can be dragged around its enclosing area. A Drag can also represent an area that other Drags can be dropped on.
+
+A Drag can be moved around inside is parent. Generally, its parent should be either a Fixed() or DragGroup.
+
+A Drag has one child. The child's state reflects the status of the drag and drop operation:
+
+selected_hover - when it is being dragged.
+
+selected_idle - when it can be dropped on.
+
+hover - when the draggable will be dragged when the mouse is clicked.
+
+idle - otherwise.
+
+The drag handle is a rectangle inside the child. The mouse must be over a pixel inside the drag handle for dragging or clicking to occur. If the focus_mask property is True, that pixel must not be transparent.
+
+A newly-created draggable is added to the default DragGroup. A draggable can only be in a single DragGroup - if it's added to a second group, it's removed from the first.
+
+When a Drag is first rendered, if it's position cannot be determined from the DragGroup it is in, the position of its upper-left corner is computed using the standard layout algorithm. Once that position has been computed, the layout properties are ignored in favor of the position stored inside the Drag.
+
+d
+If present, the child of this Drag. Drags use the child style in preference to this, if it's not None.
+
+drag_name
+If not None, the name of this draggable. This is available as the name property of draggable objects. If a Drag with the same name is or was in the DragGroup, the starting position of this Drag is taken from that Draggable.
+
+draggable
+If true, the Drag can be dragged around the screen with the mouse.
+
+droppable
+If true, other Drags can be dropped on this Drag.
+
+drag_raise
+If true, this Drag is raised to the top when it is dragged. If it is joined to other Drags, all joined drags are raised.
+
+activated
+A callback (or list of callbacks) that is called when the mouse is pressed down on the drag. It is called with one argument, a a list of Drags that are being dragged. The return value of this callback is ignored.
+
+dragging
+A callback (or list of callbacks) that is called when the Drag is being dragged. It is called with one argument, a list of Drags that are being dragged. If the callback returns a value other than None, that value is returned as the result of the interaction.
+
+dragged
+A callback (or list of callbacks) that is called when the Drag has been dragged. It is called with two arguments. The first is a list of Drags that are being dragged. The second is either a Drag that is being dropped onto, or None of a drop did not occur. If the callback returns a value other than None, that value is returned as the result of the interaction.
+
+dropped
+A callback (or list of callbacks) that is called when this Drag is dropped onto. It is called with two arguments. The first is the Drag being dropped onto. The second is a list of Drags that are being dragged. If the callback returns a value other than None, that value is returned as the result of the interaction.
+
+When a dragged and dropped callback are triggered for the same event, the dropped callback is only called if dragged returns None.
+
+clicked
+A callback this is called, with no arguments, when the Drag is clicked without being moved. A droppable can also be focused and clicked. If the callback returns a value other than None, that value is returned as the result of the interaction.
+
+alternate
+An action that is run when the Drag is right-clicked (on the desktop) or long-pressed without moving (on mobile). It may be necessary to increase config.longpress_duration if this triggers to early on mobile platforms.
+
+drag_handle
+A (x, y, width, height) tuple, giving the position of the drag handle within the child. In this tuple, integers are considered to be a literal number of pixels, while floats are relative to the size of the child.
+
+drag_joined
+This is called with the current Drag as an argument. It's expected to return a list of [ (drag, x, y) ] tuples, giving the draggables to drag as a unit. x and y are the offsets of the drags relative to each other, they are not relative to the corner of this drag.
+
+drag_offscreen
+Determines the conditions under which the drag is allowed to be dragged offscreen. Allowing offscreen dragging can be dangerous to use with drag_joined or drags that can change size, as the drags can leave the screen entirely, with no way to get them back on the screen.
+
+This should be one of:
+
+False
+To disallow dragging the drag offscreen. (The default)
+
+True
+To allow dragging offscreen, in any direction.
+
+"horizontal"
+To allow dragging offscreen in the horizontal direction only.
+
+"vertical"
+To allow dragging offscreen in the vertical direction only.
+
+(width, height)
+Both width and height must be integers. The drag can be dragged offscreen as long as a (width, height)-sized part of it remains on-screen. So, (100, 100) will ensure that at least a 100x100 pixel area of the displayable will remain on-screen even while the rest of the displayable can be dragged offscreen. Setting this to the width and height of the displayable being dragged is equivalent to not allowing the drag to go offscreen at all.
+
+(min_x, max_x, min_y, max_y)
+Where each of min_x, max_x, min_y, and max_y are integers. min_x is the number of pixels away from the left border, and max_x is the number of pixels away from the right border. The same goes for min_y and max_y on the top and bottom borders respectively. The drag can be moved until one of its edges hit the specified border. (0, 0, 0, 0) is equivalent to not allowing dragging offscreen at all.
+
+For example, (-100, 200, 0, 0) would allow the drag to be dragged 100 pixels off the left edge of the screen and 200 pixels off the right edge of the screen, but does not allow it to be dragged offscreen at the top nor bottom.
+
+This can also be used to constrain the drag within the screen bounds. (200, -200, 200, -200) would only allow the drag within 200 pixels of the edges of the screen.
+
+You can envision this as an additional "border" around the drag, which may go outside the bounds of the screen, that constrains the drag to remain within it.
+
+callable
+A callable can be provided to drag_offscreen. It must take two arguments: an x and a y position which represents the dragged position of the top left corner of the drag, and it must return an (x, y) tuple which is the new (x, y) position the drag should be in. This callable is called frequently, whenever the drag is moved. For example, the following function snaps the drag into place every 300 pixels:
+
+def drag_snap(x, y):
+
+    if y < 300:
+        y = 0
+    elif y < 600:
+        y = 300
+    else:
+        y = 600
+
+    return 200, y
+mouse_drop
+If true, the drag is dropped on the first droppable under the cursor. If false, the default, the drag is dropped onto the droppable with the largest degree of overlap.
+
+drop_allowable
+A callback that is called to determine whether this drop will allow the current drags to be dropped onto it. It is called with two arguments. The first is the Drag which determines its sensitivity. The second is a list of Drags that are being dragged.
+
+Except for d, all of the parameters are available as fields (with the same name) on the Drag object. In addition, after the drag has been rendered, the following fields become available:
+
+x, y
+The position of the Drag relative to its parent, in pixels.
+
+start_x, start_y
+The drag start position of the Drag relative to its parent, in pixels.
+
+w, h
+The width and height of the Drag's child, in pixels.
+
+bottom()link
+Lowers this displayable to the bottom of its drag_group.
+
+set_child(d)link
+Changes the child of this drag to d.
+
+snap(x, y, delay=0)link
+Changes the position of the drag. If the drag is not showing, then the position change is instantaneous. Otherwise, the position change takes delay seconds, and is animated as a linear move.
+
+top()link
+Raises this displayable to the top of its drag_group.
+
+classDragGroup(*children, **properties)link
+Represents a group of Drags. A Drag is limited to the boundary of its DragGroup. Dropping only works between Drags that are in the same DragGroup. Drags may only be raised when they are inside a DragGroup.
+
+A DragGroup is laid out like a Fixed().
+
+All positional parameters to the DragGroup constructor should be Drags, that are added to the DragGroup.
+
+min_overlap
+An integer which means the minimum number of pixels at the overlap for the drop to be allowed.
+
+add(child)link
+Adds child, which must be a Drag, to this DragGroup.
+
+get_child_by_name(name)link
+Returns the first child of this DragGroup that has a drag_name of name.
+
+remove(child)link
+Removes child from this DragGroup.
+
+Exampleslink
+An example of a say screen that allows the user to choose the location of the window by dragging it around the screen.:
+
+screen say(who, what):
+
+    drag:
+        drag_name "say"
+        yalign 1.0
+        drag_handle (0, 0, 1.0, 30)
+
+        xalign 0.5
+
+        window id "window":
+            # Ensure that the window is smaller than the screen.
+            xmaximum 600
+
+            has vbox
+
+            if who:
+                text who id "who"
+
+            text what id "what"
+Here's a more complicated example, one that shows how dragging can be used to influence gameplay. It shows how dragging can be used to send a character to a location:
+
+init python:
+
+    def detective_dragged(drags, drop):
+
+        if not drop:
+            return
+
+        store.detective = drags[0].drag_name
+        store.city = drop.drag_name
+
+        return True
+
+screen send_detective_screen:
+
+    # A map as background.
+    add "europe.jpg"
+
+    # A drag group ensures that the detectives and the cities can be
+    # dragged to each other.
+    draggroup:
+
+        # Our detectives.
+        drag:
+            drag_name "Ivy"
+            droppable False
+            dragged detective_dragged
+            xpos 100 ypos 100
+
+            add "ivy.png"
+        drag:
+            drag_name "Zack"
+            droppable False
+            dragged detective_dragged
+            xpos 150 ypos 100
+
+            add "zack.png"
+
+        # The cities they can go to.
+        drag:
+            drag_name "London"
+            draggable False
+            xpos 450 ypos 140
+
+            add "london.png"
+
+        drag:
+            drag_name "Paris"
+            draggable False
+            xpos 500 ypos 280
+
+            add "paris.png"
+
+label send_detective:
+    "We need to investigate! Who should we send, and where should they go?"
+
+    call screen send_detective_screen
+
+    "Okay, we'll send [detective] to [city]."
+More complicated systems take significant programming skill to get right.
+
+The as clause can be used to bind a drag to variable, which can then be used to call methods on the drag.
+
+screen snap():
+
+    drag:
+        as carmen
+        draggable True
+        xpos 100 ypos 100
+        frame:
+            style "empty"
+            background "carmen.png"
+            xysize (100, 100)
+
+            vbox:
+                textbutton "London" action Function(carmen.snap, 450, 140, 1.0)
+                textbutton "Paris" action Function(carmen.snap, 500, 280, 1.0)
+
+
+Spriteslink
+To support the display of a large number of images at once, Ren'Py supports a sprite system. This system allows one to create sprites, where each sprite contains a displayable. The sprites can then have their location on the screen and vertical ordering changed.
+
+If one ignores performance, the sprite system is conceptually similar to a Fixed() wrapping Transform()s. Sprites are much faster than transforms, but also less flexible. The big performance improvement of sprites is that each Displayable is rendered only once per frame, even if that Displayable is used by many sprites. The limitation is that Sprites only allow one to change their xoffset and yoffset, rather than the many properties that a Transform has.
+
+To use the sprite system, create a SpriteManager object, and then call its create method to create new particles. As necessary, update the xoffset, yoffset, and zorder fields of each sprite to move it around the screen. By supplying update and event arguments to SpriteManager, you can have the sprites change over time, and react to user input.
+
+Sprite Classeslink
+classSpritelink
+This represents a sprite that is managed by the SpriteManager. It contains fields that control the placement of the sprite on the screen. Sprites should not be created directly. Instead, they should be created by calling SpriteManager.create().
+
+The fields of a sprite object are:
+
+x, y
+The x and y coordinates of the upper-left corner of the sprite, relative to the SpriteManager.
+
+zorder
+An integer that's used to control the order of this sprite in the relative to the other sprites in the SpriteManager. The larger the number is, the closer to the viewer the sprite is.
+
+events
+If True, then events are passed to child. If False, the default, the children ignore events (and hence don't spend time processing them).
+
+The methods of a Sprite object are:
+
+destroy()link
+Destroys this sprite, preventing it from being displayed and removing it from the SpriteManager.
+
+set_child(d)link
+Changes the Displayable associated with this sprite to d.
+
+classSpriteManager(update=None, event=None, predict=None, ignore_time=False, **properties)link
+This displayable manages a collection of sprites, and displays them at the fastest speed possible.
+
+update
+If not None, a function that is called each time a sprite is rendered by this sprite manager. It is called with one argument, the time in seconds since this sprite manager was first displayed. It is expected to return the number of seconds until the function is called again, and the SpriteManager is rendered again.
+
+event
+If not None, a function that is called when an event occurs. It takes as arguments: * A pygame event object. * The x coordinate of the event. * The y coordinate of the event. * The time since the sprite manager was first shown. If it returns a non-None value, the interaction ends, and that value is returned.
+
+predict
+If not None, a function that returns a list of displayables. These displayables are predicted when the sprite manager is.
+
+ignore_time
+If True, then time is ignored when rendering displayables. This should be used when the sprite manager is used with a relatively small pool of images, and those images do not change over time. This should only be used with a small number of displayables, as it will keep all displayables used in memory for the life of the SpriteManager.
+
+After being rendered once (before the update function is called), SpriteManagers have the following fields:
+
+width, height
+The width and height of this SpriteManager, in pixels.
+
+SpriteManagers have the following methods:
+
+create(d)link
+Creates a new Sprite for the displayable d, and adds it to this SpriteManager.
+
+redraw(delay=0)link
+Causes this SpriteManager to be redrawn in delay seconds.
+
+SnowBlossom(d, count=10, border=50, xspeed=(20, 50), yspeed=(100, 200), start=0, fast=False, horizontal=False)link
+The snowblossom effect moves multiple instances of a sprite up, down, left or right on the screen. When a sprite leaves the screen, it is returned to the start.
+
+d
+The displayable to use for the sprites.
+
+border
+The size of the border of the screen. The sprite is considered to be on the screen until it clears the border, ensuring that sprites do not disappear abruptly.
+
+xspeed, yspeed
+The speed at which the sprites move, in the horizontal and vertical directions, respectively. These can be a single number or a tuple of two numbers. In the latter case, each particle is assigned a random speed between the two numbers. The speeds can be positive or negative, as long as the second number in a tuple is larger than the first.
+
+start
+The delay, in seconds, before each particle is added. This can be allows the particles to start at the top of the screen, while not looking like a "wave" effect.
+
+fast
+If true, particles start in the center of the screen, rather than only at the edges.
+
+horizontal
+If true, particles appear on the left or right side of the screen, rather than the top or bottom.
+
+Sprite Exampleslink
+The SnowBlossom class is an easy-to use way of placing falling things on the screen.
+
+image snow = SnowBlossom("snow.png", count=100)
+This example shows how a SpriteManager can be used to create complex behaviors. In this case, it shows 400 particles, and has them avoid the mouse.
+
+init python:
+    import math
+
+    def repulsor_update(st):
+
+        # If we don't know where the mouse is, give up.
+        if repulsor_pos is None:
+            return .01
+
+        px, py = repulsor_pos
+
+        # For each sprite...
+        for i in repulsor_sprites:
+
+            # Compute the vector between it and the mouse.
+            vx = i.x - px
+            vy = i.y - py
+
+            # Get the vector length, normalize the vector.
+            vl = math.hypot(vx, vy)
+            if vl >= 150:
+                continue
+
+            # Compute the distance to move.
+            distance = 3.0 * (150 - vl) / 150
+
+            # Move
+            i.x += distance * vx / vl
+            i.y += distance * vy / vl
+
+            # Ensure we stay on the screen.
+            if i.x < 2:
+                i.x = 2
+
+            if i.x > repulsor.width - 2:
+                i.x = repulsor.width - 2
+
+            if i.y < 2:
+                i.y = 2
+
+            if i.y > repulsor.height - 2:
+                i.y = repulsor.height - 2
+
+        return .01
+
+    # On an event, record the mouse position.
+    def repulsor_event(ev, x, y, st):
+        store.repulsor_pos = (x, y)
+
+
+label repulsor_demo:
+
+    python:
+        # Create a sprite manager.
+        repulsor = SpriteManager(update=repulsor_update, event=repulsor_event)
+        repulsor_sprites = [ ]
+        repulsor_pos = None
+
+        # Ensure we only have one smile displayable.
+        smile = Image("smile.png")
+
+        # Add 400 sprites.
+        for i in range(400):
+            repulsor_sprites.append(repulsor.create(smile))
+
+        # Position the 400 sprites.
+        for i in repulsor_sprites:
+            i.x = renpy.random.randint(2, 798)
+            i.y = renpy.random.randint(2, 598)
+
+        del smile
+        del i
+
+    # Add the repulsor to the screen.
+    show expression repulsor as repulsor
+
+    "..."
+
+    hide repulsor
+
+    # Clean up.
+    python:
+        del repulsor
+        del repulsor_sprites
+        del repulsor_pos
+
+
+Customizing the Keymaplink
+The variable config.keymap contains a map from event names to lists of keysyms that cause those events to occur.
+
+Note
+
+Many players have learned the default set of Ren'Py keybindings, and expect them to be the same from game to game.
+
+In Ren'Py keysyms are strings representing mouse buttons, joystick buttons, or keyboard keys.
+
+Mouse buttons use keysyms of the form 'mouseup_#' or 'mousedown_#', where # is a button number. Ren'Py assumes a five button mouse, where buttons 1, 2, and 3 are the left, middle, and right buttons, while buttons 4 and 5 are generated by scrolling the wheel up and down. For example, "mousedown_1" is generally a press of the left mouse button, "mouseup_1" is a release of that button, and "mousedown_4" is a turn of the scroll wheel to the top.
+
+There are two kinds of keyboard keysyms. The first is a string containing a character that is generated when a key is pressed. This is useful for binding alphabetic keys and numbers. Examples of these keysyms include "a", "A", and "7". Note that these are case sensitive, "a" does not match "A". This kind of keysym is only useful when an event generates text - for example, the a key being released will not match keyup_a, as no text is generated.
+
+Keyboard keysyms can also be the symbolic name for the key. This can be any of the K_ constants taken from pygame.constants. This type of keysym looks like "K_BACKSPACE", "K_RETURN", and "K_TAB"; a full list of this kind of keysyms may be found here.
+
+Keyboard and Mouse keysyms may be preceded by the following prefixes, separated by underscores:
+
+alt
+Matches if the Alt key is pressed. Keysyms without this prefix match when the Alt key is not pressed.
+
+meta
+Matches if the meta, Command, or Windows key is pressed. Keysyms without this prefix match when the meta key is not pressed.
+
+ctrl
+Matches if the Ctrl key is pressed. Keysyms without this prefix match when the Ctrl key is not pressed. (Ctrl is not very useful, as it usually triggers skipping.)
+
+osctrl
+This is alt on the Macintosh, and ctrl elsewhere.
+
+shift
+Matches when the Shift key is pressed.
+
+noshift
+Matches when the Shift key is not pressed.
+
+caps
+Matches when the Caps Lock key is on.
+
+nocaps
+Matches when the Caps Lock key is off.
+
+num
+Matches when the Num Lock key is on.
+
+nonum
+Matches when the Num Lock key is off.
+
+repeat
+Matches when the key is a repeat due to the key being held down. Keysyms without the repeat or any prefixes do not match repeats. (This does not work with mouse buttons.)
+
+any
+Matches both initial keypresses and repeats.
+
+keydown
+Matches when the key is being pressed down (the default).
+
+keyup
+Matches when the key is being released.
+
+For example, the keysym "shift_alt_K_F5" will match the F5 key being pressed while Shift and Alt are held down. The keysym "shift_mouse_1" will match the left mouse button being pressed while Shift is held down.
+
+To change a binding, update the appropriate list in config.keymap. The following adds the 't' key to the list of keys that dismiss a say statement, and removes the space key from that list.
+
+init python:
+    config.keymap['dismiss'].append('K_t')
+    config.keymap['dismiss'].remove('K_SPACE')
+The default keymap is contained inside renpy/common/00keymap.rpy, and as of version 8.1.0 is as follows:
+
+config.keymap = dict(
+
+    # Bindings present almost everywhere, unless explicitly
+    # disabled.
+    rollback = [ 'any_K_PAGEUP', 'any_KP_PAGEUP', 'K_AC_BACK', 'mousedown_4' ],
+    screenshot = [ 'alt_K_s', 'alt_shift_K_s', 'noshift_K_s' ],
+    toggle_afm = [ ],
+    toggle_fullscreen = [ 'alt_K_RETURN', 'alt_K_KP_ENTER', 'K_F11', 'noshift_K_f' ],
+    game_menu = [ 'K_ESCAPE', 'K_MENU', 'K_PAUSE', 'mouseup_3' ],
+    hide_windows = [ 'mouseup_2', 'noshift_K_h' ],
+    launch_editor = [ 'shift_K_e' ],
+    dump_styles = [ ],
+    reload_game = [ 'alt_K_r', 'shift_K_r' ],
+    inspector = [ 'alt_K_i', 'shift_K_i' ],
+    full_inspector = [ 'alt_shift_K_i' ],
+    developer = [ 'alt_K_d', 'shift_K_d', ],
+    quit = [ ],
+    iconify = [ ],
+    help = [ 'K_F1', 'meta_shift_/' ],
+    choose_renderer = ['alt_K_g', 'shift_K_g' ],
+    progress_screen = [ 'alt_shift_K_p', 'meta_shift_K_p', 'K_F2' ],
+    accessibility = [ 'K_a' ],
+
+    # Accessibility.
+    self_voicing = [ 'alt_K_v', 'K_v' ],
+    clipboard_voicing = [ 'alt_shift_K_c', 'shift_K_c' ],
+    debug_voicing = [ 'alt_shift_K_v', 'meta_shift_K_v' ],
+
+    # Say.
+    rollforward = [ 'any_K_PAGEDOWN', 'any_KP_PAGEDOWN', 'mousedown_5', ],
+    dismiss = [ 'K_RETURN', 'K_SPACE', 'K_KP_ENTER', 'K_SELECT', 'mouseup_1' ],
+    dismiss_unfocused = [ ],
+
+    # Pause.
+    dismiss_hard_pause = [ ],
+
+    # Focus.
+    focus_left = [ 'any_K_LEFT', 'any_KP_LEFT' ],
+    focus_right = [ 'any_K_RIGHT', 'any_KP_RIGHT' ],
+    focus_up = [ 'any_K_UP', 'any_KP_UP' ],
+    focus_down = [ 'any_K_DOWN', 'any_KP_DOWN' ],
+
+    # Button.
+    button_ignore = [ 'mousedown_1' ],
+    button_select = [ 'K_RETURN', 'K_KP_ENTER', 'K_SELECT', 'mouseup_1',  ],
+    button_alternate = [ 'mouseup_3' ],
+    button_alternate_ignore = [ 'mousedown_3' ],
+
+    # Input.
+    input_backspace = [ 'any_K_BACKSPACE' ],
+    input_enter = [ 'K_RETURN', 'K_KP_ENTER' ],
+    input_next_line = [ 'shift_K_RETURN', 'shift_K_KP_ENTER' ],
+    input_left = [ 'any_K_LEFT', 'any_KP_LEFT' ],
+    input_right = [ 'any_K_RIGHT', 'any_KP_RIGHT' ],
+    input_up = [ 'any_K_UP', 'any_KP_UP' ],
+    input_down = [ 'any_K_DOWN', 'any_KP_DOWN' ],
+    input_delete = [ 'any_K_DELETE', 'any_KP_DELETE' ],
+    input_home = [ 'K_HOME', 'KP_HOME', 'meta_K_LEFT' ],
+    input_end = [ 'K_END', 'KP_END', 'meta_K_RIGHT' ],
+    input_copy = [ 'ctrl_noshift_K_INSERT', 'ctrl_noshift_K_c', 'meta_noshift_K_c' ],
+    input_paste = [ 'shift_K_INSERT', 'ctrl_noshift_K_v', 'meta_noshift_K_v' ],
+    input_jump_word_left = [ 'osctrl_K_LEFT', 'osctrl_KP_LEFT' ],
+    input_jump_word_right = [ 'osctrl_K_RIGHT', 'osctrl_KP_RIGHT' ],
+    input_delete_word = [ 'osctrl_K_BACKSPACE' ],
+    input_delete_full = [ 'meta_K_BACKSPACE' ],
+
+    # Viewport.
+    viewport_leftarrow = [ 'any_K_LEFT', 'any_KP_LEFT' ],
+    viewport_rightarrow = [ 'any_K_RIGHT', 'any_KP_RIGHT' ],
+    viewport_uparrow = [ 'any_K_UP', 'any_KP_UP' ],
+    viewport_downarrow = [ 'any_K_DOWN', 'any_KP_DOWN' ],
+    viewport_wheelup = [ 'mousedown_4' ],
+    viewport_wheeldown = [ 'mousedown_5' ],
+    viewport_drag_start = [ 'mousedown_1' ],
+    viewport_drag_end = [ 'mouseup_1' ],
+    viewport_pageup = [ 'any_K_PAGEUP', 'any_KP_PAGEUP'],
+    viewport_pagedown = [ 'any_K_PAGEDOWN', 'any_KP_PAGEDOWN' ],
+
+    # These keys control skipping.
+    skip = [ 'K_LCTRL', 'K_RCTRL' ],
+    stop_skipping = [ ],
+    toggle_skip = [ 'K_TAB' ],
+    fast_skip = [ '>', 'shift_K_PERIOD' ],
+
+    # Bar.
+    bar_activate = [ 'mousedown_1', 'K_RETURN', 'K_KP_ENTER', 'K_SELECT' ],
+    bar_deactivate = [ 'mouseup_1', 'K_RETURN', 'K_KP_ENTER', 'K_SELECT' ],
+    bar_left = [ 'any_K_LEFT', 'any_KP_LEFT' ],
+    bar_right = [ 'any_K_RIGHT', 'any_KP_RIGHT' ],
+    bar_up = [ 'any_K_UP', 'any_KP_UP' ],
+    bar_down = [ 'any_K_DOWN', 'any_KP_DOWN' ],
+
+    # Delete a save.
+    save_delete = [ 'K_DELETE', 'KP_DELETE' ],
+
+    # Draggable.
+    drag_activate = [ 'mousedown_1' ],
+    drag_deactivate = [ 'mouseup_1' ],
+
+    # Debug console.
+    console = [ 'shift_K_o', 'alt_shift_K_o' ],
+    console_older = [ 'any_K_UP', 'any_KP_UP' ],
+    console_newer = [ 'any_K_DOWN', 'any_KP_DOWN' ],
+
+    # Director
+    director = [ 'noshift_K_d' ],
+
+    # Ignored (kept for backwards compatibility).
+    toggle_music = [ ],
+    viewport_up = [ ],
+    viewport_down = [ ],
+
+    # Profile commands.
+    performance = [ 'K_F3' ],
+    image_load_log = [ 'K_F4' ],
+    profile_once = [ 'K_F8' ],
+    memory_profile = [ 'K_F7' ],
+
+)
+Gamepad bindings work a little differently. Gamepad bindings work by mapping a gamepad event to one or more Ren'Py event names. The default set of gamepad bindings is given below:
+
+config.pad_bindings = {
+    "pad_leftshoulder_press" : [ "rollback", ],
+    "pad_lefttrigger_pos" : [ "rollback", ],
+    "pad_back_press" : [ "rollback", ],
+
+    "repeat_pad_leftshoulder_press" : [ "rollback", ],
+    "repeat_pad_lefttrigger_pos" : [ "rollback", ],
+    "repeat_pad_back_press" : [ "rollback", ],
+
+    "pad_guide_press" : [ "game_menu", ],
+    "pad_start_press" : [ "game_menu", ],
+
+    "pad_y_press" : [ "hide_windows", ],
+
+    "pad_rightshoulder_press" : [ "rollforward", ],
+    "repeat_pad_rightshoulder_press" : [ "rollforward", ],
+
+    "pad_righttrigger_pos" : [ "dismiss", "button_select", "bar_activate", "bar_deactivate" ],
+    "pad_a_press" : [ "dismiss", "button_select", "bar_activate", "bar_deactivate"],
+    "pad_b_press" : [ "button_alternate" ],
+
+    "pad_dpleft_press" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
+    "pad_leftx_neg" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
+    "pad_rightx_neg" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
+
+    "pad_dpright_press" : [ "focus_right", "bar_right", "viewport_rightarrow" ],
+    "pad_leftx_pos" : [ "focus_right", "bar_right", "viewport_rightarrow" ],
+    "pad_rightx_pos" : [ "focus_right", "bar_right", "viewport_rightarrow" ],
+
+    "pad_dpup_press" : [ "focus_up", "bar_up", "viewport_uparrow" ],
+    "pad_lefty_neg" : [ "focus_up", "bar_up", "viewport_uparrow" ],
+    "pad_righty_neg" : [ "focus_up", "bar_up", "viewport_uparrow" ],
+
+    "pad_dpdown_press" : [ "focus_down", "bar_down", "viewport_downarrow" ],
+    "pad_lefty_pos" : [ "focus_down", "bar_down", "viewport_downarrow" ],
+    "pad_righty_pos" : [ "focus_down", "bar_down", "viewport_downarrow" ],
+
+    "repeat_pad_dpleft_press" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
+    "repeat_pad_leftx_neg" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
+    "repeat_pad_rightx_neg" : [ "focus_left", "bar_left", "viewport_leftarrow" ],
+
+    "repeat_pad_dpright_press" : [ "focus_right", "bar_right", "viewport_rightarrow" ],
+    "repeat_pad_leftx_pos" : [ "focus_right", "bar_right", "viewport_rightarrow" ],
+    "repeat_pad_rightx_pos" : [ "focus_right", "bar_right", "viewport_rightarrow" ],
+
+    "repeat_pad_dpup_press" : [ "focus_up", "bar_up", "viewport_uparrow" ],
+    "repeat_pad_lefty_neg" : [ "focus_up", "bar_up", "viewport_uparrow" ],
+    "repeat_pad_righty_neg" : [ "focus_up", "bar_up", "viewport_uparrow" ],
+
+    "repeat_pad_dpdown_press" : [ "focus_down", "bar_down", "viewport_downarrow" ],
+    "repeat_pad_lefty_pos" : [ "focus_down", "bar_down", "viewport_downarrow" ],
+    "repeat_pad_righty_pos" : [ "focus_down", "bar_down", "viewport_downarrow" ],
+}
+Gamepad buttons have an event name of the form "pad_*button*_press" or "pad_*button*_release". Analog axis events have the form "pad_*axis*_pos", "pad_*axis*_neg", or "pad_*axis*_zero". If held down, a second gamepad binding is generated, with the the "repeat_" prefix.
+
+Gamepads that do not work without special initialization are disabled by default. This includes the Nintendo Switch Pro Controller, which requires special initialization to work on a PC. This blocklisting is controlled by config.controller_blocklist.
+
+renpy.clear_keymap_cache()link
+Clears the keymap cache. This allows changes to config.keymap to take effect without restarting Ren'Py.
+
+Achievementslink
+The Achievement module allows the developer to grant achievements to the player, to clear achievements, and to determine if an achievement has been granted. It also allows the recording of progress towards an achievement.
+
+By default, the achievement stores information in the persistent file. If Steam support is available and enabled, achievement information is automatically synchronized with Steam.
+
+Steam support must be added to Ren'Py, to ensure that it is only distributed by creators that have been accepted to the Steam partner program. To install it, choose "preferences", "Install libraries", "Install Steam Support".
+
+achievement.Sync()link
+An action that calls achievement.sync(). This is only sensitive if achievements are out of sync.
+
+achievement.clear(name)link
+Clears the achievement with name.
+
+achievement.clear_all()link
+Clears all achievements.
+
+achievement.get_progress(name)link
+Returns the current progress towards the achievement identified with name, or 0 if no progress has been registered for it or if the achievement is not known.
+
+achievement.grant(name)link
+Grants the achievement with name, if it has not already been granted.
+
+achievement.has(name)link
+Returns true if the player has been granted the achievement with name.
+
+achievement.progress(name, complete)link
+Reports progress towards the achievement with name, if that achievement has not been granted. The achievement must be defined with a completion amount.
+
+name
+The name of the achievement. This should be the name of the achievement, and not the stat.
+
+complete
+An integer giving the number of units completed towards the achievement.
+
+achievement.register(name, **kwargs)link
+Registers an achievement. Achievements are not required to be registered, but doing so allows one to pass information to the backends.
+
+name
+The name of the achievement to register.
+
+The following keyword parameters are optional.
+
+steam
+The name to use on steam. If not given, defaults to name.
+
+stat_max
+The integer value of the stat at which the achievement unlocks.
+
+stat_modulo
+If the progress modulo stat_max is 0, progress is displayed to the user. For example, if stat_modulo is 10, progress will be displayed to the user when it reaches 10, 20, 30, etc. If not given, this defaults to 0.
+
+achievement.sync()link
+Synchronizes registered achievements between local storage and other backends. (For example, Steam.)
+
+Variables that control achievements are:
+
+achievement.steam_position = Nonelink
+If not None, this sets the position of the steam notification popup. This must be a string, one of "top left", "top right", "bottom left", or "bottom right".
+
+define config.steam_appid = Nonelink
+If not None, this should be the Steam appid. Ren'Py will automatically set this appid when it starts. This needs to be set using the define statement:
+
+define config.steam_appid = 12345
+Steamworks APIlink
+When Steam is available, a ctypes-based binding to the Steamworks API is available as achievement.steamapi. The binding is an instance of the steamapi module, as found here, and represents a machine translation of the C++ Steamworks API to Python.
+
+
+
+Dialogue Historylink
+Ren'Py includes a dialogue history system that stores each line of dialogue after it has been shown to the player. This stored dialogue can then be retrieved and re-shown to the player.
+
+The dialogue history system is controlled by two variables. The config.history_length variable controls the maximum number of history entries that are stored, and must be set to enable history at all. The _history variable can be used to disable and re-enable history storage.
+
+Finally, the _history_list variable stores the actual history, as a list of HistoryEntry objects. HistoryEntry objects contain data in their fields, as defined below.
+
+classHistoryEntrylink
+kindlink
+The kind of character that created this history. Ren'Py sets this to "current" while a line of dialogue is displaying, and then to either "adv" or "nvl".
+
+wholink
+A string giving the name of the character that is speaking, or None if no such string exists.
+
+whatlink
+A string giving the dialogue text.
+
+who_argslink
+A dictionary giving the properties that were supplied to the who text widget when the dialogue was originally shown.
+
+what_argslink
+A dictionary giving the properties that were supplied to the what text widget when the dialogue was originally shown.
+
+window_argslink
+A dictionary giving the properties that were supplied to the dialogue window when the dialogue was originally shown.
+
+show_argslink
+A dictionary giving the properties that were supplied to the say screen when the dialogue was originally shown.
+
+image_taglink
+The image tag given to the Character(), or None if no such tag was given.
+
+voicelink
+This is the object returned from _get_voice_info(), storing information about the voice that is being played.
+
+rollback_identifierlink
+This is an identifier that can be passed to the RollbackToIdentifier() action, to cause a rollback to the line of script that generated this history entry. The rollback only occurs if the location is still in the script log, otherwise the action is insensitive.
+
+Once a HistoryEntry has been created, it is passed to each of the callbacks in config.history_callbacks, which allows creator-written code to add new fields.
+
+
+
+Multiple Character Dialoguelink
+Ren'Py supports displaying dialogue from multiple characters simultaneously. Multiple dialogue is invoked by giving the lines of dialogue the multiple argument. For example:
+
+e "Ren'Py supports displaying multiple lines of dialogue simultaneously." (multiple=2)
+l "About bloody time! I've been waiting for this for years." (multiple=2)
+Multiple dialogue is invoked by passing a line of dialogue the multiple argument with the number of lines of dialogue to combine together. (So if we had multiple=3, three blocks of dialogue would be combined.)
+
+Multiple dialogue works by showing the say screen more than once, with different styles. Each say screen is responsible for showing dialogue from a single character.
+
+There are a few restrictions on multiple dialogue:
+
+When displaying multiple dialogue, text tags that cause the text to pause, like {p} and {w}, will not function properly. This is because each screen is only displayed once, and those tags require screens to be displayed multiple times to function.
+
+Auto-forward mode only works on the last block of text. While this should be fine in most cases, it can lead to problems if the last block of text is shorter than the rest, as auto-forward may engage early.
+
+Extend will not work. (It will only apply to the last block of text.)
+
+Styleslink
+Generally, the way multiple dialogue works is to display the say screen multiple times, with the styles of various displayables systematically renamed to reflect the block number and the number of blocks in total.
+
+Specifically, multiple dialogue uses styles with names of the form block`n`_multiple`m`_`style`, where n is the one-based number of the block, and m is the number of blocks of dialogue being displayed at once.
+
+In our example above, the window corresponding to each block of dialogue are given the names:
+
+block1_multiple2_say_window
+
+block2_multiple2_say_window
+
+This naming scheme is used for the dialogue, name, and namebox, as well as the window. It's designed so style inheritance is useful here. For the window styles we'll have:
+
+say_window
+Used for the normal case of a single dialogue window, this can serve as a base for all dialogue windows.
+
+multiple2_say_window
+This can be used for properties common to the two dialogue windows, like changing the background and reducing the margin and padding.
+
+block1_multiple2_say_window
+This could be used to position the first of the two dialogue windows, such as using xalign 0.0 to put it on the left side.
+
+block2_multiple2_say_window
+Similarly, this can be used to position the second window, with xalign 1.0 putting it on the right side.
+
+The Multiple Say Screenlink
+For more control, there is the multiple_say screen. When it exists, the multiple_say screen is used in place of the normal say screen. It takes a third argument, multiple, which is a tuple. The first component of the tuple is the block number, and the second is the total number of screens.
+
+NVL-Modelink
+By default, NVL-Mode displays multiple text blocks one on top of another. This can be customized by changing the nvl screen, which is passed a list of objects with the multiple argument that can be reorganized and presented.
+
+
+
+Splashscreen and Presplashlink
+Adding a Splashscreenlink
+A splash screen is an image or movie that appears when the game is starting up and before it goes to the menu. Usually these are logos or intro videos. The "splashscreen" label automatically plays before the main menu. However, the same code applies to a splashscreen located anywhere in your game under a different label.
+
+To add a textual splashscreen to your game, insert code like the below anywhere in your script files (as long as it is not itself in a block):
+
+label splashscreen:
+    scene black
+    with Pause(1)
+
+    show text "American Bishoujo Presents..." with dissolve
+    with Pause(2)
+
+    hide text with dissolve
+    with Pause(1)
+
+    return
+Here's another example of a splashscreen, this time using an image and sound:
+
+image splash = "splash.png"
+
+label splashscreen:
+    scene black
+    with Pause(1)
+
+    play sound "ping.ogg"
+
+    show splash with dissolve
+    with Pause(2)
+
+    scene black with dissolve
+    with Pause(1)
+
+    return
+And finally, with a movie file:
+
+label splashscreen:
+
+    $ renpy.movie_cutscene('movie.ogv')
+
+    return
+Adding a Presplashlink
+A presplash is an image shown while Ren'py is reading the scripts and launching the game. To show such and image while the engine is starting up, create an image file named presplash.png (or presplash.jpg), and save it into the game directory.
+
+presplash.png
+The image that's used when the game is loading.
+
+This will only work on computer platforms, not on android, ios or web. For the android platform, see Presplash, and for the web, see Web Presplash.
+
+The config.minimum_presplash_time variable sets a minimum time the presplash is shown for.
+
+Adding a Progress Barlink
+Instead of a static image, it is also possible to show a progress bar indicating the progress until the engine has loaded. This replaces the regular presplash image and will automatically take precedence if both are supplied.
+
+The progress bar is themeable and requires you to supply two files in either PNG or JPG format:
+
+presplash_background.png
+The background image of the progress bar. This is shown in its entirety during startup, so it can be used to provide any kind of background for the progress bar, i.e. by adding a border or any other solid background. This should always be completely opaque.
+
+presplash_foreground.png
+The foreground image of the progress bar. This is revealed from left to right during the loading sequence. This should be used to provide the look of the actual progress bar. This may contain transparency.
+
+The way this works is that Ren'Py will first show presplash_background.png and subsequently will render presplash_foreground.png on top, revealing it from left to right as the loading progresses.
+
+The theming of the bar is completely up to you, but you can find two examples of how things could look below:
+
+_images/presplash_background_1.png
+An example of how the progress bar background could look.link
+
+_images/presplash_foreground_1.png
+An example of how the progress bar foreground could look.link
+
+_images/presplash_background_2.png
+An slightly more elaborate example of how the progress bar background could look.link
+
+_images/presplash_foreground_2.png
+An slightly more elaborate example of how the progress bar foreground could look.link
+
+Mobile and Web Presplash Screenslink
+The Android, iOS, and Web platforms have their own presplash screens. These are documented elsewhere:
+
+Android Presplash
+
+iOS Launch Storyboard
+
+Web Presplash
+
+
+
+Lifecycle of a Ren'Py gamelink
+When launching a Ren'Py game, be it from the executable or from the launcher, it follows a series of steps up until the point where it is closed. This page exposes the various phases of this lifecycle, and various related statements.
+
+Boot Timelink
+There are a lot of things happening before the game window appears. This is the boot time. The only thing that's possibly visible at that point is the presplash.
+
+Script Parsing Phaselink
+To read the game's code, Ren'Py reads each of the game's .rpy (and _ren.py) files one by one, in the unicode order of their filepaths. That's the "parsing" phase, or "early" phase.
+
+The first creator-written code being executed is what's written in python early blocks. These are executed after the file they're in has been read and parsed, but before the next file gets read. This is why statements which modify how parsing works, like Creator-Defined Statements, Creator-Defined Screen Language Statements or new custom Warpers, must be written in python early blocks.
+
+The init python early syntax is sometimes encountered, but it's redundant and doesn't change anything in how the code gets executed compared to python early.
+
+Init Phaselink
+After parsing/early phase, the "init" phase starts. Several statements are executed at that time, including the Init Python Statement, the Define Statement, the Transform Statement, the Image Statement, the Screen Statement, and the style statement. The init phase is divided in successive epochs, or init priorities, from -999 to 999. Contrary to what the term may imply, epochs of lower priority are executed before epochs of higher priority.
+
+By default, these statements are executed at init offset 0. However, they can be offset using the Init Offset Statement or by other means. The Image Statement is an exception to both of these rules, as it executes at an init priority of 500 by default, and the init offset statement adds or substracts from this 500, rather than replacing it.
+
+Automatic image definition from the Images Directory occurs at init priority 0.
+
+Note that while the default statements are not executed at init time, the priority of the statements influences the order in which they will be executed, relative to one another.
+
+Init Offset Statementlink
+The init offset statement sets a priority offset for all statements that run at init time. It should be placed at the top of the file, and it applies to all following statements in the current block and child blocks, up to the next init priority statement. The statement:
+
+init offset = 42
+sets the priority offset to 42. In:
+
+init offset = 2
+define foo = 2
+
+init offset = 1
+define foo = 1
+
+init offset = 0
+The first define statement is run at priority 2, which means it runs after the second define statement, and hence foo winds up with a value of 2.
+
+Script Executionlink
+This is what happens once the game window becomes visible. This is when normal Ren'Py statements execute, and when the rules described in Labels & Control Flow apply. This is also the time when the variables from default statements are set for the first time - as opposed to define statements which are set at init time.
+
+Config variables should not be changed once normal game execution starts.
+
+Splashscreenlink
+If it exists, the splashscreen label is executed until it returns.
+
+A splashscreen is only displayed once per time Ren'Py is run, and is skipped when script execution restarts.
+
+Main Menulink
+If it exists, the before_main_menu label is executed. Then, once it returns, the main_menu screen is shown, unless a main_menu label exists, in which case it is executed instead. See Special Labels for more information.
+
+The main menu itself is run in its own context. Ren'Py can leave this context by calling the Start action, which also jumps to a label or to the start label if none is specified. Returning from the main_menu label also enters the in-game phase at the start label, while loading a game enters the in-game phase at the spot where the game was saved.
+
+In-Game Phaselink
+This is the phase in which an actual playthrough of the game occurs, and this is the mode in which players generally spend most of their time. This phase continues until the game quits, or the game restarts and the player returns to the main menu.
+
+During the in-game phase, the ShowMenu action can be used to display a screen in a new context.
+
+The In-game phase continues until either the player quits or restarts the game to return to the main menu. The game may be restarted by returning when no call is on the stack, as explained explained in Labels & Control Flow. The game may also be restarted by the MainMenu action or the renpy.full_restart() function.
+
+When the game restarts, all non-persistent data is reset to what it was at the end of the script execution phase, and then the script execution phase begins again, skipping the splashscreen.
+

@@ -1,0 +1,4000 @@
+Statement Equivalentslink
+To allow Ren'Py to be scripted in Python, each Ren'Py statement has a Python equivalent. This usually consists of a Python function, but may also consist of a pattern of Python calls that perform an action equivalent to the statement.
+
+Note that using statement equivalents in lieu of the original statements usually removes any possible Lint checks and prediction optimizations, making your game less easily checkable and possibly less fluid. It can also disable features in certain cases.
+
+Dialoguelink
+Warning
+
+Several features, such as skipping already-seen dialogues, are not available using the python version and only enabled when using the native say statement.
+
+The Ren'Py Say Statement is equivalent to calling the character object (when any is present) as a function. Displaying narration (meaning when no character is supplied) can be done the same way, by using the narrator character.
+
+e "Hello, world."
+$ e("Hello, world.")
+
+"And then the sun exploded."
+$ narrator("And then the sun exploded.")
+Proxy functionslink
+This equivalence of characters and function objects works in the other direction as well. It is possible to declare a Python function, and then use that function in the place of a character object in a native say statement. For example, the following function uses a variable to choose between two characters.
+
+define lucy_normal = Character("Lucy")
+define lucy_evil = Character("Evil Lucy")
+
+init python:
+
+    def l(what, **kwargs):
+        if lucy_is_evil:
+            lucy_evil(what, **kwargs)
+        else:
+            lucy_normal(what, **kwargs)
+
+label start:
+
+    $ lucy_is_evil = False
+
+    l "Usually, I feel quite normal."
+
+    $ lucy_is_evil = True
+
+    l "But sometimes, I get really mad!"
+A function used in this way should either ignore unknown keyword arguments, or pass them to a character function. Doing this will allow the game to continue working if future versions of Ren'Py add additional keyword arguments to character calls.
+
+Note that unlike other possible arguments, interact=True will always be passed to the function - unless manually passing (interact=False). A Say with Arguments sees the arguments (including the supplementary interact) passed to the function. For example:
+
+e "Hello, world." (what_size=32)
+resolves to the following call:
+
+e("Hello, world.", what_size=32, interact=True)
+Note that it's not required to pass interact=True when calling a Character object for it to work as intended. The following works just as well:
+
+$ e("Hello, world.", what_size=32)
+When e is a Character, this is further equivalent to:
+
+$ Character(kind=e, what_size=32)("Hello, world.")
+But it's possible to use config.say_arguments_callback or have e wrap a character to do things differently.
+
+There is one additional way of replacing the say statement using Python:
+
+renpy.say(who, what, *args, **kwargs)link
+The equivalent of the say statement.
+
+who
+Either the character that will say something, None for the narrator, or a string giving the character name. In the latter case, the say() is used to create the speaking character.
+
+what
+A string giving the line to say. Percent-substitutions are performed in this string.
+
+interact
+If true, Ren'Py waits for player input when displaying the dialogue. If false, Ren'Py shows the dialogue, but does not perform an interaction. (This is passed in as a keyword argument.)
+
+This function is rarely necessary, as the following three lines are equivalent.
+
+e "Hello, world."
+$ renpy.say(e, "Hello, world.")
+$ e("Hello, world.") # when e is not a string
+Dialogue Window Managementlink
+Window management is performed by setting the _window and _window_auto variables, and by using the following two functions:
+
+_window_hide(trans=False, auto=False)link
+The Python equivalent of the window hide statement.
+
+trans
+If False, the default window hide transition is used. If None, no transition is used. Otherwise, the specified transition is used.
+
+auto
+If True, this becomes the equivalent of the window auto hide statment.
+
+_window_show(trans=False, auto=False)link
+The Python equivalent of the window show statement.
+
+trans
+If False, the default window show transition is used. If None, no transition is used. Otherwise, the specified transition is used.
+
+auto
+If True, this becomes the equivalent of the window auto show statment.
+
+Choice Menuslink
+The menu statement has an equivalent Python function.
+
+renpy.display_menu(items, *, interact=True, screen='choice', **kwargs)link
+This displays a menu to the user. items should be a list of 2-item tuples. In each tuple, the first item is a textual label, and the second item is the value to be returned if that item is selected. If the value is None, the first item is used as a menu caption.
+
+This function takes many arguments, of which only a few are documented. Except for items, all arguments should be given as keyword arguments.
+
+interact
+If false, the menu is displayed, but no interaction is performed.
+
+screen
+The name of the screen used to display the menu.
+
+Note that most Ren'Py games do not use menu captions, but use narration instead. To display a menu using narration, write:
+
+$ narrator("Which direction would you like to go?", interact=False)
+$ result = renpy.display_menu([ ("East", "east"), ("West", "west") ])
+Displaying Imageslink
+The image, scene, show, and hide statements each have an equivalent Python function (see Displaying Images for the original statements).
+
+renpy.get_at_list(name, layer=None)link
+Returns the list of transforms being applied to the image with tag name on layer. Returns an empty list if no transforms are being applied, or None if the image is not shown.
+
+If layer is None, uses the default layer for the given tag.
+
+renpy.hide(name, layer=None)link
+Hides an image from a layer. The Python equivalent of the hide statement.
+
+name
+The name of the image to hide. Only the image tag is used, and any image with the tag is hidden (the precise name does not matter).
+
+layer
+The layer on which this function operates. If None, uses the default layer associated with the tag.
+
+renpy.image(name, d)link
+Defines an image. This function is the Python equivalent of the image statement.
+
+name
+The name of the image to display, a string.
+
+d
+The displayable to associate with that image name.
+
+This function may only be run from inside an init block. It is an error to run this function once the game has started.
+
+renpy.scene(layer='master')link
+Removes all displayables from layer. This is equivalent to the scene statement, when the scene statement is not given an image to show.
+
+A full scene statement is equivalent to a call to renpy.scene followed by a call to renpy.show(). For example:
+
+scene bg beach
+is equivalent to:
+
+$ renpy.scene()
+$ renpy.show("bg beach")
+renpy.show(name, at_list=[], layer=None, what=None, zorder=0, tag=None, behind=[], **kwargs)link
+Shows an image on a layer. This is the programmatic equivalent of the show statement.
+
+name
+The name of the image to show, a string.
+
+at_list
+A list of transforms that are applied to the image. The equivalent of the at property.
+
+layer
+A string, giving the name of the layer on which the image will be shown. The equivalent of the onlayer property. If None, uses the default layer associated with the tag.
+
+what
+If not None, this is a displayable that will be shown in lieu of looking on the image. (This is the equivalent of the show expression statement.) When a what parameter is given, name can be used to associate a tag with the image.
+
+zorder
+An integer, the equivalent of the zorder property. If None, the zorder is preserved if it exists, and is otherwise set to 0.
+
+tag
+A string, used to specify the image tag of the shown image. The equivalent of the as property.
+
+behind
+A list of strings, giving image tags that this image is shown behind. The equivalent of the behind property.
+
+show a
+$ renpy.show("a")
+
+show expression w
+# anonymous show expression : no equivalent
+
+show expression w as a
+$ renpy.show("a", what=w)
+$ renpy.show("y", what=w, tag="a") # in this case, name is ignored
+
+show a at T, T2
+$ renpy.show("a", at_list=(T, T2))
+
+show a onlayer b behind c zorder d as e
+$ renpy.show("a", layer="b", behind=["c"], zorder="d", tag="e")
+renpy.show_layer_at(at_list, layer='master', reset=True, camera=False)link
+The Python equivalent of the show layer layer at at_list statement. If camera is True, the equivalent of the camera statement.
+
+reset
+If true, the transform state is reset to the start when it is shown. If false, the transform state is persisted, allowing the new transform to update that state.
+
+Transitionslink
+The equivalent of the With Statement is the renpy.with_statement() function.
+
+renpy.with_statement(trans, always=False)link
+Causes a transition to occur. This is the Python equivalent of the with statement.
+
+trans
+The transition.
+
+always
+If True, the transition will always occur, even if the user has disabled transitions.
+
+This function returns true if the user chose to interrupt the transition, and false otherwise.
+
+Jumplink
+The equivalent of the Jump Statement is the renpy.jump() function.
+
+renpy.jump(label)link
+Causes the current statement to end, and control to jump to the given label.
+
+Calllink
+The equivalent of the Call Statement is the renpy.call() function.
+
+renpy.call(label, *args, from_current=False, **kwargs)link
+Causes the current Ren'Py statement to terminate, and a jump to a label to occur. When the jump returns, control will be passed to the statement following the current statement.
+
+from_current
+If true, control will return to the current statement, rather than the statement following the current statement. (This will lead to the current statement being run twice. This must be passed as a keyword argument.)
+
+renpy.return_statement(value=None)link
+Causes Ren'Py to return from the current Ren'Py-level call.
+
+Pauselink
+The equivalent of the Pause Statement is the renpy.pause() function.
+
+renpy.pause(delay=None, *, hard=False, predict=False, modal=None)link
+Causes Ren'Py to pause. Returns true if the user clicked to end the pause, or false if the pause timed out or was skipped.
+
+delay
+If given, the number of seconds Ren'Py should pause for.
+
+The following should be given as keyword arguments:
+
+hard
+This must be given as a keyword argument. When True, Ren'Py may prevent the user from clicking to interrupt the pause. If the player enables skipping, the hard pause will be skipped. There may be other circumstances where the hard pause ends early or prevents Ren'Py from operating properly, these will not be treated as bugs.
+
+In general, using hard pauses is rude. When the user clicks to advance the game, it's an explicit request - the user wishes the game to advance. To override that request is to assume you understand what the player wants more than the player does.
+
+Calling renpy.pause guarantees that whatever is on the screen will be displayed for at least one frame, and hence has been shown to the player.
+
+tl;dr - Don't use renpy.pause with hard=True.
+
+predict
+If True, Ren'Py will end the pause when all prediction, including prediction scheduled with renpy.start_predict() and renpy.start_predict_screen(), has been finished.
+
+This also causes Ren'Py to prioritize prediction over display smoothness for the duration of the pause. Because of that, it's recommended to not display animations during prediction.
+
+modal
+If True or None, the pause will not end when a modal screen is being displayed. If False, the pause will end while a modal screen is being displayed.
+
+Layeredimagelink
+The Layeredimage statement has Python equivalents. The group statement does not: the name of the group is supplied to Attribute, and the auto feature can be implemented using renpy.list_images().
+
+classAttribute(group, attribute, image=None, default=False, group_args={}, **kwargs)link
+This is used to represent a layer of an LayeredImage that is controlled by an attribute. A single attribute can control multiple layers, in which case all layers corresponding to that attribute will be displayed.
+
+group
+A string giving the group the attribute is part of. This may be None, in which case a group with the same name as the attribute is created.
+
+attribute
+A string giving the name of the attribute.
+
+image
+If not None, this should be a displayable that is displayed when this attribute is shown.
+
+default
+If True, and no other attribute for the group is selected, this attribute is.
+
+The following keyword arguments are also known:
+
+at
+A transform or list of transforms that are applied to the image.
+
+if_all
+An attribute or list of attributes. The displayable is only shown if all of these are showing.
+
+if_any
+An attribute or list of attributes. if not empty, the displayable is only shown if any of these are showing.
+
+if_not
+An attribute or list of attributes. The displayable is only shown if none of these are showing.
+
+Other keyword arguments are interpreted as transform properties. If any are present, a transform is created that wraps the image. (For example, pos=(100, 200) can be used to offset the image by 100 pixels horizontally and 200 vertically.)
+
+If the image parameter is omitted or None, and the LayeredImage has been given the image_format parameter, the image_format is used to generate an image filename.
+
+classCondition(condition, image, **kwargs)link
+When the condition is true, the layer is displayed. Otherwise, nothing is displayed.
+
+This is used to implement a single if, elif or else layeredimage statement (for else, condition should be "True"). Several Conditions can then be passed to a ConditionGroup to emulate a full if/elif/else statement.
+
+condition
+This should be a string giving a Python condition that determines if the layer is displayed.
+
+image
+If not None, this should be a displayable that is displayed when the condition is true.
+
+if_all
+An attribute or list of attributes. The condition is only evaluated if all of these are showing.
+
+if_any
+An attribute or list of attributes. If not empty, the condition is only evaluated if any of these are showing.
+
+if_not
+An attribute or list of attributes. The condition is only evaluated if none of these are showing.
+
+at
+A transform or list of transforms that are applied to the image.
+
+Other keyword arguments are interpreted as transform properties. If any is present, a transform is created that wraps the image. (For example, pos=(100, 200) can be used to offset the image by 100 pixels horizontally and 200 vertically.)
+
+classConditionGroup(conditions)link
+Takes a list of Condition to combine them into a single ConditionSwitch().
+
+Implements the if/elif/else statement.
+
+classLayeredImage(attributes, at=[], name=None, image_format=None, format_function=None, attribute_function=None, offer_screen=None, **kwargs)link
+This is an image-like object that, when shown with the proper set of attributes, shows a displayable created by compositing together the displayables associated with those attribute.
+
+attributes
+This must be a list of Attribute, Condition, ConditionGroup or displayable objects. Each one reflects a displayable that may or may not be displayed as part of the image. The items in this list are in back-to-front order, with the first item further from the viewer and the last closest. Passing a displayable directly is the equivalent of the always layeredimage statement.
+
+at
+A transform or list of transforms that are applied to the displayable after it is parameterized.
+
+name
+The name of the layeredimage. This is used as part of the names of image components.
+
+image_format
+When a given image is a string, and this is supplied, the image name is interpolated into image_format to make an image file. For example, "sprites/eileen/{image}.png" will look for the image in a subdirectory of sprites. (This is not used by auto groups, which look for images and not image files.)
+
+format_function
+A function that is used instead of layeredimage.format_function to format the image information into a displayable.
+
+attribute_function
+If not None, a function that's called with a set of attributes supplied to the image, and returns the set of attributes used to select layers. This is called when determining the layers to display, after the attribute themselves have been chosen. It can be used to express complex dependencies between attributes or select attributes at random.
+
+offer_screen
+Sets whether or not the available area is taken into account as for how children are placed and how they are sized (when they have variable size). If False, the available area is considered, and if True it is not. If None, defaults to config.layeredimage_offer_screen.
+
+Additional keyword arguments may contain transform properties. If any are present, a transform is created that wraps the result image. Remaining keyword arguments are passed to a Fixed that is created to hold the layer. Unless explicitly overridden, xfit and yfit are set to true on the Fixed, which means it will shrink to the smallest size that fits all of the layer images it is showing.
+
+A LayeredImage is not a displayable, and can't be used in all the places a displayable can be used. This is because it requires an image name (generally including image attributes) to be provided. As such, it should either be displayed through a scene or show statement, or by an image name string used as a displayable.
+
+add(a)link
+a
+An Attribute, Condition, ConditionGroup or displayable object.
+
+This method adds the provided layer to the list of layers of the layeredimage, as if it had been passed in the attributes argument to the constructor.
+
+Saving, Loading, and Rollbacklink
+Ren'Py has support for saving game state, loading game state, and rolling back to a previous game state. Although implemented in a slightly different fashion, rollback can be thought of as saving the game at the start of each statement that interacts with the user, and loading saves when the user rolls back.
+
+Note
+
+While we usually attempt to keep save compatibility between releases, this compatibility is not guaranteed. We may decide to break save-compatibility if doing so provides a sufficiently large benefit.
+
+What is Savedlink
+Ren'Py attempts to save the game state. This includes both internal state and Python state.
+
+The internal state consists of all aspects of Ren'Py that are intented to change once the game has started, and includes:
+
+The current statement, and all statements that can be returned to.
+
+The images and displayables that are being shown.
+
+The screens being shown, and the values of variables within those screens.
+
+The music that Ren'Py is playing.
+
+The list of nvl-mode text blocks.
+
+The Python state consists of the variables in the store that have changed since the game began, and all objects reachable from those variables. Note that it's the change to the variables that matters – changes to fields in objects will not cause those objects to be saved.
+
+Variables set using the default statement will always be saved.
+
+In this example:
+
+define a = 1
+define o = object()
+default c = 17
+
+label start:
+     $ b = 1
+     $ o.value = 42
+only b and c will be saved. A will not be saved because it does not change once the game begins. O is not saved because it does not change – the object it refers to changes, but the variable itself does not.
+
+What isn't Savedlink
+Python variables that are not changed after the game begins will not be saved. This can be a major problem if a variable that is not saved and one that is refer to the same object. (Alias the object.) In this example:
+
+init python:
+    a = object()
+    a.f = 1
+
+label start:
+    $ b = a
+    $ b.f = 2
+
+    "a.f=[a.f] b.f=[b.f]"
+a and b are aliased. Saving and loading may break this aliasing, causing a and b to refer to different objects. Since this can be very confusing, it's best to avoid aliasing saved and unsaved variables. (This is rare to encounter directly, but might come up when an unsaved variable and saved field alias.)
+
+There are several other kinds of state that isn't saved:
+
+control flow path
+Ren'Py only saves the current statement, and the statement it needs to return to. It doesn't remember how it got there. Importantly, statements (including variable assignments) that are added to the game won't run.
+
+mappings of image names to displayables
+Since this mapping is not saved, the image may change to a new image when the game loads again. This allows an image to change to a new file as the game evolves.
+
+configuration variables, styles, and style properties
+Configuration variables and styles aren't saved as part of the game. Therefore, they should only be changed in init blocks, and left alone once the game has started.
+
+Where Ren'Py Saveslink
+Saves occur at the start of a Ren'Py statement in the outermost interaction context.
+
+What's important here is to note that saving occurs at the start of a statement. If a load or rollback occurs in the middle of a statement that interacts multiple times, the state will be the state that was active when the statement began.
+
+This can be a problem in Python-defined statements. In:
+
+python:
+
+     i = 0
+
+     while i < 10:
+
+          i += 1
+
+          narrator("The count is now [i].")
+if the user saves and loads in the middle, the loop will begin anew. Using Ren'Py script – rather than Python – to loop avoids this problem.:
+
+$ i = 0
+
+while i < 10:
+
+     $ i += 1
+
+     "The count is now [i]."
+What Ren'Py Can Savelink
+Ren'Py uses the Python pickle system to save game state. This module can save:
+
+Basic types, such as True, False, None, int, str, float, complex, str, and Unicode objects.
+
+Compound types, like lists, tuples, sets, and dicts.
+
+Creator-defined objects, classes, functions, methods, and bound methods. For pickling these functions to succeed, they must remain available under their original names.
+
+Character, Displayable, Transform, and Transition objects.
+
+What Ren'Py Can't Savelink
+There are certain types that cannot be pickled:
+
+Render objects.
+
+Iterator objects.
+
+Generator objects.
+
+Coroutine tasks and futures, like those created with async and await.
+
+File-like objects.
+
+Network sockets, and objects that enclose them.
+
+Inner functions and lambdas.
+
+This may not be an exhaustive list.
+
+Objects that can't be pickled can still be used, provided that their use is combined to namespaces that aren't saved by Ren'Py (like init variables, namespaces inside functions, or python hide blocks.)
+
+For example, using a file object like:
+
+$ monika_file = open(config.gamedir + "/monika.chr", "w")
+$ monika_file.write("Do not delete.\r\n")
+$ monika_file.close()
+Won't work, as f could be saved between any of the three Python statements. Putting this in a python hide block will work:
+
+python hide:
+
+    monika_file = open(config.gamedir + "/monika.chr", "w")
+    monika_file.write("Do not delete.\r\n")
+    monika_file.close()
+(Of course, using the python with statement would be cleaner.)
+
+python hide:
+
+    with open(config.gamedir + "/monika.chr", "w") as monika_file:
+        monika_file.write("Do not delete.\r\n")
+Coroutines, like those made with async, await, or the asyncio are similar. If you have:
+
+init python:
+
+    import asyncio
+
+    async def sleep_func():
+        await asyncio.sleep(1)
+        await asyncio.sleep(1)
+then:
+
+$ sleep_task = sleep_func()
+$ asyncio.run(sleep_task)
+will have problems, since sleep_task can't be saved. But if it's not assigned to a variable:
+
+$ asyncio.run(sleep_func())
+will run fine.
+
+Save Functions and Variableslink
+There is one variable that is used by the high-level save system: save_name.
+
+This is a string that is stored with each save. It can be used to give a name to the save, to help users tell them apart.
+
+More per-save data customization can be done with the Json supplementary data system, see config.save_json_callbacks.
+
+There are a number of high-level save actions and functions defined in the screen actions. In addition, there are the following low-level save and load actions.
+
+renpy.can_load(filename, test=False)link
+Returns true if filename exists as a save slot, and False otherwise.
+
+renpy.copy_save(old, new)link
+Copies the save at old to new. (Does nothing if old does not exist.)
+
+renpy.list_saved_games(regexp='.', fast=False)link
+Lists the save games. For each save game, returns a tuple containing:
+
+The filename of the save.
+
+The extra_info that was passed in.
+
+A displayable that, when displayed, shows the screenshot that was used when saving the game.
+
+The time the game was stayed at, in seconds since the UNIX epoch.
+
+regexp
+A regular expression that is matched against the start of the filename to filter the list.
+
+fast
+If fast is true, the filename is returned instead of the tuple.
+
+renpy.list_slots(regexp=None)link
+Returns a list of non-empty save slots. If regexp exists, only slots that begin with regexp are returned. The slots are sorted in string-order.
+
+renpy.load(filename)link
+Loads the game state from the save slot filename. If the file is loaded successfully, this function never returns.
+
+renpy.newest_slot(regexp=None)link
+Returns the name of the newest save slot (the save slot with the most recent modification time), or None if there are no (matching) saves.
+
+If regexp exists, only slots that begin with regexp are returned.
+
+renpy.rename_save(old, new)link
+Renames a save from old to new. (Does nothing if old does not exist.)
+
+renpy.save(filename, extra_info='')link
+Saves the game state to a save slot.
+
+filename
+A string giving the name of a save slot. Despite the variable name, this corresponds only loosely to filenames.
+
+extra_info
+An additional string that should be saved to the save file. Usually, this is the value of save_name.
+
+renpy.take_screenshot() should be called before this function.
+
+renpy.slot_json(slotname)link
+Returns the json information for slotname, or None if the slot is empty.
+
+Much like the d argument to the config.save_json_callbacks function, it will be returned as a dictionary. More precisely, the dictionary will contain the same data as it did when the game was saved.
+
+renpy.slot_mtime(slotname)link
+Returns the modification time for slot, or None if the slot is empty.
+
+renpy.slot_screenshot(slotname)link
+Returns a display that can be used as the screenshot for slotname, or None if the slot is empty.
+
+renpy.take_screenshot()link
+Causes a screenshot to be taken. This screenshot will be saved as part of a saved game.
+
+renpy.unlink_save(filename)link
+Deletes the save slot with the given name.
+
+Retaining Data After Loadlink
+When a game is loaded, the state of the game is reset (using the rollback system described below) to the state of the game when the current statement began executing.
+
+In some cases, this may not be desirable. For example, when a screen allows editing of a value, we may want to retain that value when the game is loaded. When renpy.retain_after_load is called, data will not be reverted when a game is saved and loaded before the end of the next checkpointed interaction.
+
+Note that while data is not changed, control is reset to the start of the current statement. That statement will execute again, with the new data in place at the start of the statement.
+
+For example:
+
+screen edit_value:
+    hbox:
+        text "[value]"
+        textbutton "+" action SetVariable("value", value + 1)
+        textbutton "-" action SetVariable("value", value - 1)
+        textbutton "+" action Return(True)
+
+label start:
+    $ value = 0
+    $ renpy.retain_after_load()
+    call screen edit_value
+renpy.retain_after_load()link
+Causes data modified between the current statement and the statement containing the next checkpoint to be retained when a load occurs.
+
+Rollbacklink
+Rollback allows the user to revert the game to an earlier state in much the same way as undo/redo systems that are available in most modern applications. While the system takes care of maintaining the visuals and game variables during rollback events, there are several things that should be considered while creating a game.
+
+What Data is Rolled Back?link
+Rollback affects variables that have been changed after the init phase, and objects of revertable types reachable from those variables. The short version is that lists, dicts, and sets created in Ren'Py script are revertable as are instances of classes defined in Ren'Py scripts. Data created inside Python or inside Ren'Py usually isn't revertable.
+
+In more detail, inside the stores that Python embedded inside Ren'Py scripts run in, the object, list, dict, and set types have been replaced with equivalent types that are revertable. Objects that inherit from these types are also revertable. The renpy.Displayable type inherits from the revertable object type.
+
+To make the use of revertable objects more convenient, Ren'Py modifies Python found inside Ren'Py script files in the following way.
+
+Literal lists, dicts, and sets are automatically converted to the revertable equivalent.
+
+List, dict, and set comprehensions are also automatically converted to the revertable equivalent.
+
+Other python syntax, such as extended unpacking, that can create lists, dicts, or sets converts the result to the revertable equivalent. However, for performance reasons, double-starred parameters to functions and methods (that create dictionaries of extra keyword arguments) are not converted to revertable objects.
+
+Classes that do not inherit from any other types automatically inherit from the revertable object.
+
+In addition:
+
+The methods and operators of revertable types have been modified to return revertable objects when a list, dict, or set is produced.
+
+Built in functions that return lists, dicts, and sets return a revertable equivalent.
+
+Calling into Python code will not generally produce a revertable object. Some cases where you'll get an object that may not participate in rollback are:
+
+Calling methods on built-in types, like the str.split method.
+
+When the object is created in a Python module that's been imported, and then return to Ren'Py. (For example, an instance of collections.defaultdict won't participate in rollback.)
+
+Objects returned from Ren'Py's API, unless documented otherwise.
+
+If such data needs to participate in rollback, it may make sense to convert it to a type that does partipate. For example:
+
+# Calling list inside Python-in-Ren'Py converts a non-revertable list
+# into a revertable one.
+$ attrs = list(renpy.get_attributes("eileen"))
+Supporting Rollback and Roll Forwardlink
+Most Ren'Py statements automatically support rollback and roll forward. If you call ui.interact() directly, you'll need to add support for rollback and roll-forward yourself. This can be done using the following structure:
+
+# This is None if we're not rolling back, or else the value that was
+# passed to checkpoint last time if we're rolling forward.
+roll_forward = renpy.roll_forward_info()
+
+# Set up the screen here...
+
+# Interact with the user.
+rv = ui.interact(roll_forward=roll_forward)
+
+# Store the result of the interaction.
+renpy.checkpoint(rv)
+It's important that your game does not interact with the user after renpy.checkpoint has been called. (If you do, the user may not be able to rollback.)
+
+renpy.can_rollback()link
+Returns true if we can rollback.
+
+renpy.checkpoint(data=None, *, hard=True)link
+Makes the current statement a checkpoint that the user can rollback to. Once this function has been called, there should be no more interaction with the user in the current statement.
+
+This will also clear the current screenshot used by saved games.
+
+data
+This data is returned by renpy.roll_forward_info() when the game is being rolled back.
+
+hard
+If true, this is a hard checkpoint that rollback will stop at. If false, this is a soft checkpoint that will not stop rollback.
+
+renpy.get_identifier_checkpoints(identifier)link
+Given a rollback_identifier from a HistoryEntry object, returns the number of checkpoints that need to be passed to renpy.rollback() to reach that identifier. Returns None of the identifier is not in the rollback history.
+
+renpy.in_rollback()link
+Returns true if the game has been rolled back.
+
+renpy.roll_forward_info()link
+When in rollback, returns the data that was supplied to renpy.checkpoint() the last time this statement executed. Outside of rollback, returns None.
+
+renpy.rollback(force=False, checkpoints=1, defer=False, greedy=True, label=None, abnormal=True)link
+Rolls the state of the game back to the last checkpoint.
+
+force
+If true, the rollback will occur in all circumstances. Otherwise, the rollback will only occur if rollback is enabled in the store, context, and config.
+
+checkpoints
+Ren'Py will roll back through this many calls to renpy.checkpoint. It will roll back as far as it can, subject to this condition.
+
+defer
+If true, the call will be deferred until control returns to the main context.
+
+greedy
+If true, rollback will finish just after the previous checkpoint. If false, rollback finish just before the current checkpoint.
+
+label
+If not None, a label that is called when rollback completes.
+
+abnormal
+If true, the default, script executed after the transition is run in an abnormal mode that skips transitions that would have otherwise occured. Abnormal mode ends when an interaction begins.
+
+renpy.suspend_rollback(flag)link
+Rollback will skip sections of the game where rollback has been suspended.
+
+flag:
+When flag is true, rollback is suspended. When false, rollback is resumed.
+
+Blocking Rollbacklink
+Warning
+
+Blocking rollback is a user-unfriendly thing to do. If a user mistakenly clicks on an unintended choice, he or she will be unable to correct their mistake. Since rollback is equivalent to saving and loading, your users will be forced to save more often, breaking game engagement.
+
+It is possible to disable rollback in part or in full. If rollback is not wanted at all, it can simply be turned off through the config.rollback_enabled option.
+
+More common is a partial block of rollback. This can be achieved by the renpy.block_rollback() function. When called, it will instruct Ren'Py not to roll back before that point. For example:
+
+label final_answer:
+    "Is that your final answer?"
+
+menu:
+    "Yes":
+        jump no_return
+    "No":
+        "We have ways of making you talk."
+        "You should contemplate them."
+        "I'll ask you one more time..."
+        jump final_answer
+
+label no_return:
+    $ renpy.block_rollback()
+
+    "So be it. There's no turning back now."
+When the label no_return is reached, Ren'Py won't allow a rollback back to the menu.
+
+Fixing Rollbacklink
+Fixing rollback provides for an intermediate choice between unconstrained rollback and blocking rollback entirely. Rollback is allowed, but the user is not allowed to make changes to their decisions. Fixing rollback is done with the renpy.fix_rollback() function, as shown in the following example:
+
+label final_answer:
+    "Is that your final answer?"
+menu:
+    "Yes":
+        jump no_return
+    "No":
+        "We have ways of making you talk."
+        "You should contemplate them."
+        "I'll ask you one more time..."
+        jump final_answer
+
+label no_return:
+    $ renpy.fix_rollback()
+
+    "So be it. There's no turning back now."
+Now, after the fix_rollback function is called, it will still be possible for the user to roll back to the menu. However, it will not be possible to make a different choice.
+
+There are some caveats to consider when designing a game for fix_rollback. Ren'Py will automatically take care of locking any data that is given to checkpoint(). However, due to the generic nature of Ren'Py, it is possible to write scripts that bypass this and change things in ways that may have unpredictable results. Most notably, call screen doesn't work well with fixed rollback. It is up to the creator to block rollback at problematic locations.
+
+The internal user interaction options for menus, renpy.input() and renpy.imagemap() are designed to fully work with fix_rollback.
+
+Styling Fixed Rollbacklink
+Because fix_rollback changes the functionality of menus and imagemaps, it is advisable to reflect this in the appearance. To do this, it is important to understand how the widget states of the menu buttons are changed. There are two modes that can be selected through the config.fix_rollback_without_choice option.
+
+The default option will set the chosen option to "selected", thereby activating the style properties with the "selected_" prefix. All other buttons will be made insensitive and show using the properties with the "insensitive_" prefix. Effectively this leaves the menu with a single selectable choice.
+
+When the config.fix_rollback_without_choice option is set to False, all buttons are made insensitive. This means that the chosen option will use the "selected_insensitive_" prefix for the style properties while the other buttons use properties with the "insensitive_" prefix.
+
+Fixed Rollback and Custom Screenslink
+To simplify the creation of custom screens, two actions are provided to help with the most common uses. The ui.ChoiceReturn() action returns the value when the button it is attached to is clicked. The ui.ChoiceJump() action can be used to jump to a script label. However, this action only works properly when the screen is called trough a call screen statement.
+
+Examples:
+
+screen demo_imagemap():
+    roll_forward True
+
+    imagemap:
+        ground "imagemap_ground.jpg"
+        hover "imagemap_hover.jpg"
+        selected_idle "imagemap_selected_idle.jpg"
+        selected_hover "imagemap_hover.jpg"
+
+        hotspot (8, 200, 78, 78) action ui.ChoiceJump("swimming", "go_swimming", block_all=False)
+        hotspot (204, 50, 78, 78) action ui.ChoiceJump("science", "go_science_club", block_all=False)
+        hotspot (452, 79, 78, 78) action ui.ChoiceJump("art", "go_art_lessons", block_all=False)
+        hotspot (602, 316, 78, 78) action ui.ChoiceJump("home", "go_home", block_all=False)
+screen rps():
+    roll_forward True
+
+    hbox:
+        imagebutton:
+            idle "rock.png"
+            hover "rock_hover.png"
+            selected_insensitive "rock_hover.png"
+            action ui.ChoiceReturn("rock", "Rock", block_all=True)
+        imagebutton:
+            idle "paper.png"
+            hover "paper_hover.png"
+            selected_insensitive "paper_hover.png"
+            action ui.ChoiceReturn("paper", "Paper", block_all=True)
+        imagebutton:
+            idle "scissors.png"
+            hover "scissors_hover.png"
+            selected_insensitive "scissors_hover.png"
+            action ui.ChoiceReturn("scissors", "Scissors", block_all=True)
+
+        if renpy.in_fixed_rollback():
+            textbutton "Advance":
+                action Return(renpy.roll_forward_info())
+                # required because of the block_all=True in all the other buttons
+
+label dough:
+    call screen rps
+    $ chosen = _return
+    $ renpy.fix_rollback()
+    m "[chosen]!"
+When writing custom Python routines that must play nice with the fix_rollback system there are a few simple things to know. First of all the renpy.in_fixed_rollback() function can be used to determine whether the game is currently in fixed rollback state. Second, when in fixed rollback state, ui.interact() will always return the supplied roll_forward data regardless of what action was performed. This effectively means that when the ui.interact()/renpy.checkpoint() functions are used, most of the work is done.
+
+Rollback-blocking and -fixing Functionslink
+renpy.block_rollback()link
+Prevents the game from rolling back to before the current statement.
+
+renpy.fix_rollback()link
+Prevents the user from changing decisions made before the current statement.
+
+renpy.in_fixed_rollback()link
+Returns true if rollback is currently occurring and the current context is before an executed renpy.fix_rollback() statement.
+
+ui.ChoiceJump(label, value, location=None, block_all=None, sensitive=True, args=None, kwargs=None)link
+A menu choice action that returns value, while managing the button state in a manner consistent with fixed rollback. (See block_all for a description of the behavior.)
+
+label
+The label text of the button. For imagebuttons and hotspots this can be anything. This label is used as a unique identifier of the options within the current screen. Together with location it is used to store whether this option has been chosen.
+
+value
+The location to jump to.
+
+location
+A unique location identifier for the current choices screen.
+
+block_all
+If false, the button is given the selected role if it was the chosen choice, and insensitive if it was not selected.
+
+If true, the button is always insensitive during fixed rollback.
+
+If None, the value is taken from the config.fix_rollback_without_choice variable.
+
+When true is given to all items in a screen, it will become unclickable (rolling forward will still work).
+
+ui.ChoiceReturn(label, value, location=None, block_all=None, sensitive=True, args=None, kwargs=None)link
+A menu choice action that returns value, while managing the button state in a manner consistent with fixed rollback. (See block_all for a description of the behavior.)
+
+label
+The label text of the button. For imagebuttons and hotspots this can be anything. This label is used as a unique identifier of the options within the current screen. Together with location it is used to store whether this option has been chosen.
+
+value
+The value this is returned when the choice is chosen.
+
+location
+A unique location identifier for the current choices screen.
+
+block_all
+If false, the button is given the selected role if it was the chosen choice, and insensitive if it was not selected.
+
+If true, the button is always insensitive during fixed rollback.
+
+If None, the value is taken from the config.fix_rollback_without_choice variable.
+
+When true is given to all items in a screen, it will become unclickable (rolling forward will still work).
+
+NoRollbacklink
+classNoRollbacklink
+Instances of this class, and classes inheriting from this class, do not participate in rollback. Objects reachable through an instance of a NoRollback class only participate in rollback if they are reachable through other paths.
+
+classSlottedNoRollbacklink
+Instances of classes inheriting from this class do not participate in rollback. The difference between this and NoRollback is that this class does not have an associated dictionary, hence can be used with __slots__ to reduce memory usage.
+
+Objects reachable through an instance of a NoRollback class only participate in rollback if they are reachable through other paths.
+
+For example:
+
+init python:
+
+    class MyClass(NoRollback):
+        def __init__(self):
+            self.value = 0
+
+label start:
+    $ o = MyClass()
+
+    "Welcome!"
+
+    $ o.value += 1
+
+    "o.value is [o.value]. It will increase each time you rollback and then click ahead."
+
+Persistent Datalink
+Ren'Py supports persistent data, saved data that is not associated with a particular point in a game. Persistent data is accessed through fields of the persistent object, which is bound to the variable persistent.
+
+All data reachable through fields on persistent is saved when Ren'Py terminates, or when renpy.save_persistent() is called. Persistent data is loaded when Ren'Py starts, and when Ren'Py detects that the persistent data has been updated on disk.
+
+The persistent object is special in that an access to an undefined field will have a None value, rather than causing an exception. If something other than None is to be the default of a persistent value, the default statement should be used:
+
+default persistent.main_background = "princess_not_saved"
+An example use of persistent is the creation of an unlockable image gallery. This is done by storing a flag in persistent that determines if the gallery has been unlocked, as in
+
+label gallery:
+
+    if not persistent.gallery_unlocked:
+        show background
+        centered "You haven't unlocked this gallery yet."
+        $ renpy.full_restart()
+
+    # Actually show the gallery here.
+When the user gets an ending that causes the gallery to be unlocked, the flag must be set to True.
+
+$ persistent.gallery_unlocked = True
+As persistent data is loaded before init python blocks are run, persistent data should only contain types that are native to Python or Ren'Py. Alternatively, classes that are defined in python early blocks can be used, provided those classes can be pickled and implement equality.
+
+Fields starting with two underscores (__) are supported, but will receive the name-mangling effect described in this section, which means they will be specific to the file they're defined in. This implies that if the file is renamed between two releases, access to the value that field had in the previous release will be broken.
+
+In addition to this, these fields are not affected by the persistent._clear() method.
+
+As a reminder, fields starting with a single underscore _ are reserved and should not be used.
+
+Merging Persistent Datalink
+There are cases where Ren'Py has to merge persistent data from two sources. For example, Ren'Py may need to merge persistent data stored on a USB drive with persistent data from the local machine.
+
+Ren'Py does this merging on a field-by-field basis, taking the value of the field that was updated more recently. In some cases, this is not the desired behavior. In that case, the renpy.register_persistent() function can be used.
+
+For example, if we have a set of seen endings, we'd like to take the union of that set when merging data.
+
+init python:
+    if persistent.endings is None:
+        persistent.endings = set()
+
+    def merge_endings(old, new, current):
+        current.update(old)
+        current.update(new)
+        return current
+
+    renpy.register_persistent('endings', merge_endings)
+Persistent Functionslink
+persistent._hasattr(field_name)link
+Tests whether the field_name persistent field has been set or not. This allows you to distinguish fields that have been explicitly set to None from fields that have never been set.
+
+persistent._clear(progress=False)link
+Resets the persistent data, except for fields starting with __.
+
+progress
+If true, also resets progress data that Ren'Py keeps.
+
+Note that this will delete all persistent data, and will not re-apply defaults until Ren'Py restarts.
+
+renpy.register_persistent(field, func)link
+Registers a function that is used to merge values of a persistent field loaded from disk with values of current persistent object.
+
+field
+The name of a field on the persistent object.
+
+function
+A function that is called with three parameters, old, new, and current:
+
+old
+The value of the field in the older object.
+
+new
+The value of the field in the newer object.
+
+current
+The value of the field in the current persistent object. This is provided for cases where the identity of the object referred to by the field can't change.
+
+The function is expected to return the new value of the field in the persistent object.
+
+renpy.save_persistent()link
+Saves the persistent data to disk.
+
+Multi-Game Persistencelink
+Multi-Game persistence is a feature that lets you share information between Ren'Py games. This may be useful if you plan to make a series of games, and want to have them share information.
+
+To use multipersistent data, a MultiPersistent object must be created at init time (preferably using define). The user can then update this object, and save it to disk by calling its save method. Undefined fields default to None. To ensure the object can be loaded again in a different game, we strongly advise against storing instances of user-defined types in the object.
+
+classMultiPersistent(key, save_on_quit=False)link
+Creates a new MultiPersistent object. This should only be called at init time, and it returns a new MultiPersistent with the given key.
+
+key
+The key used to to access the multipersistent data. Games using the same key will access the same multipersistent data.
+
+save_on_quit
+If it is True, this object will be automatically saved when Ren'Py terminates.
+
+save()link
+Saves the multipersistent data to disk. This must be called after the data is modified.
+
+As an example, take the first part of a two-part game:
+
+define mp = MultiPersistent("demo.renpy.org")
+
+label start:
+
+    # ...
+
+    # Record the fact that the user beat part 1.
+
+    $ mp.beat_part_1 = True
+    $ mp.save()
+
+    e "You beat part 1. See you in part 2!"
+And the second part:
+
+define mp = MultiPersistent("demo.renpy.org")
+
+label start:
+
+    if mp.beat_part_1:
+         e "I see you've beaten part 1, so welcome back!"
+    else:
+         e "Hmm, you haven't played part 1, why not try it first?"
+
+
+Transforms and Transitions in Pythonlink
+Python can be used to create new transforms and transitions for use by Ren'Py scripts.
+
+Transformslink
+Main articles: Transforms and Animation and Transformation Language
+
+A transform is a Python callable that, when called with a displayable, returns another displayable.
+
+For example:
+
+init python:
+
+     # This is a transform that uses the right and
+     # left transforms.
+     def right_or_left(d):
+         if switch:
+             return right(d)
+         else:
+             return left(d)
+The Python equivalent of an ATL transform is a Transform object.
+
+classTransform(child=None, function=None, **properties)link
+A transform applies operations such as cropping, rotation, scaling, and alpha-blending to its child. A transform object has fields corresponding to the transform properties, which it applies to its child.
+
+child
+The child the transform applies to.
+
+function
+If not none, this is a function that is called when the transform is rendered. The function is called with three arguments:
+
+The transform object.
+
+The shown timebase, in seconds.
+
+The animation timebase, in seconds.
+
+The function should return a delay, in seconds, after which it will be called again, or None to be called again at the start of the next interaction.
+
+This function should not have side effects other than changing the Transform object in the first argument, and may be called at any time with any value to enable prediction.
+
+Additional keyword arguments are values that transform properties are set to. These particular transform properties will be set each time the transform is drawn, and so may not be changed after the Transform object is created. Fields corresponding to other transform properties, however, can be set and changed afterwards, either within the function passed as the function parameter, or immediately before calling the update() method.
+
+hide_requestlink
+This is set to true when the function is called, to indicate that the transform is being hidden.
+
+hide_responselink
+If hide request is true, this can be set to false to prevent the transform from being hidden.
+
+set_child(child)link
+Call this method with a new child to change the child of this transform.
+
+update()link
+This should be called when a transform property field is updated outside of the function passed as the function argument, to ensure that the change takes effect.
+
+Transitionslink
+Main article: Transitions See also: ATL Transitions
+
+A transition is a Python callable that, when called with two keyword arguments, returns a displayable that performs the transition effect. The two keyword arguments are:
+
+old_widget
+A displayable representing the old screen.
+
+new_widget
+A displayable representing the new screen.
+
+The returned displayable should have a delay field, which gives the number of seconds the transition should run for.
+
+For example:
+
+init python:
+
+    def dissolve_or_pixellate(old_widget=None, new_widget=None):
+        if persistent.want_pixellate:
+            return pixellate(old_widget=old_widget, new_widget=new_widget)
+        else:
+            return dissolve(old_widget=old_widget, new_widget=new_widget)
+
+
+Advanced GUIlink
+This section has some odds and ends about advanced usage of the GUI.
+
+Python Functionslink
+There are some Python functions that support the GUI.
+
+gui.button_properties(kind)link
+Given a kind of button, returns a dictionary giving standard style properties for that button. This sets:
+
+background
+As described below.
+
+padding
+To gui.kind_borders.padding (if it exists).
+
+xsize
+To gui.kind_width (if it exists).
+
+ysize
+To gui.kind_height (if it exists).
+
+(Note that if kind is the string "nvl_button", this will look for the gui.nvl_button_background variable.)
+
+The background is a frame that takes its background picture from the first existing one of:
+
+gui/button/kind_[prefix_].background.png
+
+gui/button/[prefix_].background.png
+
+If a gui variables named gui.kind_borders exists, it's used. Otherwise, gui.button_borders is used. If gui.kind_tile exists, it determines if the borders are tiled, else gui.button_tile controls tiling.
+
+For what [prefix_] means, check out the style prefix search documentation.
+
+gui.init(width, height, fov=75)link
+Initializes the gui.
+
+width
+The width of the default window.
+
+height
+The height of the default window.
+
+fov
+The field of view of the 3d stage.
+
+gui.rebuild()link
+Rebuilds the GUI.
+
+Note: This is a very slow function.
+
+gui.text_properties(kind=None, accent=False)link
+Given a kind of button, returns a dictionary giving standard style properties for that button. This sets:
+
+font
+To gui.kind_text_font, if it exists.
+
+size
+To gui.kind_text_size, if it exists.
+
+xalign
+To gui.kind_text_xalign, if it exists.
+
+textalign
+To gui.kind_text_xalign, if it exists.
+
+layout
+To "subtitle" if gui.kind_text_xalign is greater than zero and less than one.
+
+There are also a number of variables that set the text color style property:
+
+color
+To gui.kind_text_color, if it exists. If the variable is not set, and accent is True, sets the text color to the default accent color.
+
+insensitive_color
+To gui.kind_text_insensitive_color, if it exists.
+
+idle_color
+To gui.kind_text_idle_color, if it exists.
+
+hover_color
+To gui.kind_text_hover_color, if it exists.
+
+selected_color
+To gui.kind_text_selected_color, if it exists.
+
+All other text style properties are available. When kind is not None, position style properties are also available. For example, gui.kind_text_outlines sets the outlines style property, gui.kind_text_kerning sets kerning, and so on.
+
+gui.variant(f, variant=None)link
+A decorator that causes a function to be called when the gui is first initialized, and again each time the gui is rebuilt. This is intended to be used as a function decorator, of the form:
+
+@gui.variant
+def small():
+    gui.text_size = 30
+    # ...
+It can also be called with f (a function) and variant (a string), giving the variant name.
+
+More on gui.rebuildlink
+The gui.rebuild function is a rather slow function that updates the GUI to reflect the current state of Ren'Py. What it does is:
+
+Re-runs all of the define statements that define variables in the gui namespace.
+
+Re-runs all of the translate python blocks for the current language.
+
+Re-runs all of the style statements.
+
+Rebuilds all of the styles in the system.
+
+Note that init python blocks are not re-run on gui.rebuild. In this way,
+
+define gui.text_size = persistent.text_size
+and:
+
+init python:
+    gui.text_size = persistent.text_size
+are different.
+
+The default statement, the gui namespace, and gui.rebuildlink
+The default statement has changed semantics when applied to the gui namespace. When applied to a variable in the gui namespace, the default statement runs interleaved with the define statement, and the default statements are not re-run when gui.rebuild() is called.
+
+What this means is that if we have:
+
+default gui.accent_color = "#c04040"
+define gui.hover_color = gui.accent_color
+The first time the game is run, the accent color will be set, and then the hover color will be set to the accent color. (Both are then used to set various style colors.)
+
+However, if as part of the game script, we have:
+
+$ gui.accent_color = "#4040c0"
+$ gui.rebuild()
+Ren'Py will only re-run the define, so it will set the hover color to the accent color, and then update the styles. This makes it possible to have parts of the GUI that change as the game progresses.
+
+GUI Preferenceslink
+Ren'Py also supports a GUI preference system, consisting of a single function and a pair of actions.
+
+gui.SetPreference(name, value, rebuild=True)link
+This Action sets the gui preference with name to value.
+
+rebuild
+If true, the default, gui.rebuild() is called to make the changes take effect. This should generally be true, except in the case of multiple gui.SetPreference actions, in which case it should be False in all but the last one.
+
+This is a very slow action, and probably not suitable for use when a button is hovered.
+
+gui.TogglePreference(name, a, b, rebuild=True)link
+This Action toggles the gui preference with name between value a and value b. It is selected if the value is equal to a.
+
+rebuild
+If true, the default, gui.rebuild() is called to make the changes take effect. This should generally be true, except in the case of multiple gui.SetPreference actions, in which case it should be False in all but the last one.
+
+This is a very slow action, and probably not suitable for use when a button is hovered.
+
+gui.preference(name, default=...)link
+This function returns the value of the gui preference with name.
+
+default
+If given, this value becomes the default value of the gui preference. The default value must be given the first time the preference is used.
+
+Examplelink
+The GUI preference system is used by calling gui.preference() when defining variables, with the name of the preference and the default value. For example, one can use GUI preferences to define the text font and size.
+
+define gui.text_font = gui.preference("font", "DejaVuSans.ttf")
+define gui.text_size = gui.preference("size", 22)
+It's then possible to use the gui.SetPreference and gui.TogglePreference actions to add change the values of the preferences. Here's some examples that can be added to the preferences screen.
+
+vbox:
+    style_prefix "check"
+    label _("Options")
+    textbutton _("OpenDyslexic") action gui.TogglePreference("font", "OpenDyslexic-Regular.otf", "DejaVuSans.ttf")
+
+vbox:
+    style_prefix "radio"
+    label _("Text Size")
+    textbutton _("Small") action gui.SetPreference("size", 20)
+    textbutton _("Medium") action gui.SetPreference("size", 22)
+    textbutton _("Big") action gui.SetPreference("size", 24)
+
+Screens and Pythonlink
+Screen Functionslink
+The following functions support various operations related to screens.
+
+renpy.call_screen(_screen_name, *args, _with_none=True, _mode='screen', **kwargs)link
+The programmatic equivalent of the call screen statement.
+
+This shows _screen_name as a screen, then causes an interaction to occur. The screen is hidden at the end of the interaction, and the result of the interaction is returned.
+
+Positional arguments, and keyword arguments that do not begin with _ are passed to the screen.
+
+If _with_none is false, "with None" is not run at the end of end of the interaction.
+
+If _mode is passed, it will be the mode of this interaction, otherwise the mode will be "screen".
+
+renpy.current_screen()link
+Returns information about the screen currently being updated, rendered, or processed.
+
+See get_screen() for documented fields on the returned object.
+
+renpy.get_adjustment(bar_value)link
+Given bar_value, a BarValue, returns the ui.adjustment() if uses. The adjustment has the following to attributes defined:
+
+valuelink
+The current value of the bar.
+
+rangelink
+The current range of the bar.
+
+renpy.get_displayable(screen, id, layer=None, base=False)link
+From the screen on layer, returns the displayable with id. Returns None if the screen doesn't exist, or there is no widget with that id on the screen.
+
+renpy.get_displayable_properties(id, screen=None, layer=None)link
+Returns the properties for the displayable with id in the screen on layer. If screen is None, returns the properties for the current screen. This can be used from Python or property code inside a screen.
+
+Note that this returns a dictionary containing the widget properties, and so to get an individual property, the dictionary must be accessed.
+
+renpy.get_screen(name, layer=None)link
+Returns information about the screen with the given name on layer. name is first interpreted as a tag name, and then as a screen name. If the screen is not showing, returns None.
+
+This can also take a list of names, in which case the first screen that is showing is returned.
+
+This function can be used to check whether a screen is showing:
+
+if renpy.get_screen("say"):
+    text "The say screen is showing."
+else:
+    text "The say screen is hidden."
+The objects returned by this function have the following documented fields:
+
+layerlink
+The layer the screen is being displayed on.
+
+namelink
+The name of the screen.
+
+zorderlink
+The zorder the screen is being displayed at.
+
+renpy.hide_screen(tag, layer=None)link
+The programmatic equivalent of the hide screen statement.
+
+Hides the screen with tag on layer.
+
+renpy.set_focus(screen, id, layer='screens')link
+This attempts to focus the displayable with id in the screen screen. Focusing will fail if the displayable isn't found, the window isn't focused, or something else is grabbing focus.
+
+The focus may change if the mouse moves, even slightly, after this call is processed.
+
+renpy.show_screen(_screen_name, *args, _layer=None, _zorder=None, _tag=None, _widget_properties={}, _transient=False, **kwargs)link
+The programmatic equivalent of the show screen statement.
+
+Shows the named screen. This takes the following keyword arguments:
+
+_screen_name
+The name of the screen to show.
+
+_layer
+The layer to show the screen on. This is equivalent to the onlayer clause of the Show Screen statement.
+
+_zorder
+The zorder to show the screen on. If not specified, defaults to the zorder associated with the screen. If that's not specified, it is 0 by default.
+
+_tag
+The tag to show the screen with. If not specified, defaults to the tag associated with the screen. If that's not specified, defaults to the name of the screen.
+
+This is equivalent to the as clause of the Show Screen statement.
+
+_widget_properties
+A map from the id of a widget to a property name -> property value dictionary. When a widget with that id is shown by the screen, the specified properties are added to it.
+
+_transient
+If true, the screen will be automatically hidden at the end of the current interaction.
+
+Non-keyword arguments, and keyword arguments that do not begin with an underscore, are passed to the screen.
+
+renpy.start_predict_screen(_screen_name, *args, **kwargs)link
+Causes Ren'Py to start predicting the screen named _screen_name with the given arguments. This replaces any previous prediction of _screen_name. To stop predicting a screen, call renpy.stop_predict_screen().
+
+Prediction will occur during normal gameplay. To wait for prediction to complete, use the predict argument to renpy.pause().
+
+renpy.stop_predict_screen(name)link
+Causes Ren'Py to stop predicting the screen named name.
+
+renpy.variant(name)link
+Returns true if name is a screen variant that corresponds to the context in which Ren'Py is currently executing. See Screen Variants for more details. This function can be used as the condition in an if statement to switch behavior based on the selected screen variant.
+
+name can also be a list of variants, in which case this function returns True if any of the variants would.
+
+classui.adjustment(range=1, value=0, step=None, page=None, changed=None, adjustable=None, ranged=None, force_step=False)link
+Adjustment objects represent a value that can be adjusted by a bar or viewport. They contain information about the value, the range of the value, and how to adjust the value in small steps and large pages.
+
+The following parameters correspond to fields or properties on the adjustment object:
+
+range
+The range of the adjustment, a number.
+
+value
+The value of the adjustment, a number.
+
+step
+The step size of the adjustment, a number. If None, then defaults to 1/10th of a page, if set. Otherwise, defaults to the 1/20th of the range.
+
+This is used when scrolling a viewport with the mouse wheel.
+
+page
+The page size of the adjustment. If None, this is set automatically by a viewport. If never set, defaults to 1/10th of the range.
+
+It's can be used when clicking on a scrollbar.
+
+The following parameters control the behavior of the adjustment.
+
+adjustable
+If True, this adjustment can be changed by a bar. If False, it can't.
+
+It defaults to being adjustable if a changed function is given or if the adjustment is associated with a viewport, and not adjustable otherwise.
+
+changed
+This function is called with the new value when the value of the adjustment changes.
+
+ranged
+This function is called with the adjustment object when the range of the adjustment is set by a viewport.
+
+This function may be called multiple times, as part of the layout process.
+
+force_step
+If True and this adjustment changes by dragging associated viewport or a bar, value will be changed only if the drag reached next step. If "release" and this adjustment changes by dragging associated viewport or a bar, after the release, value will be rounded to the nearest step. If False, this adjustment will changes by dragging, ignoring the step value.
+
+change(value)link
+Changes the value of the adjustment to value, updating any bars and viewports that use the adjustment.
+
+ui.interact(*, roll_forward=None, mouse='default')link
+Causes an interaction with the user, and returns the result of that interaction. This causes Ren'Py to redraw the screen and begin processing input events. When a displayable returns a value in response to an event, that value is returned from ui.interact, and the interaction ends.
+
+This function is rarely called directly. It is usually called by other parts of Ren'Py, including the say statement, menu statement, with statement, pause statement, call screen, renpy.input(), among many other functions. However, it can be called directly if necessary.
+
+When an interaction ends, the transient layer and all screens shown with _transient as true are cleared from the scene lists.
+
+The following arguments are documented. As other, undocumented arguments exist for Ren'Py's internal use, please pass all arguments as keyword arguments.
+
+roll_forward
+The information that will be returned by this function when a roll forward occurs. (If None, the roll forward is ignored.) This should usually be passed the result of the renpy.roll_forward_info() function.
+
+mouse
+The style of mouse cursor to use during this function.
+
+Actionslink
+Many of the displayables created in the screen language take actions as arguments. An action is one of three things:
+
+A callable Python object (like a function or bound method) that takes no arguments.
+
+An object of a class that inherits from the Action class.
+
+A list of other Actions.
+
+The advantage to inheriting from the Action class is that it allows you to override the methods that determine when a button should be sensitive, and when it is selected.
+
+classActionlink
+To define a new action, inherit from this class. Override the methods in this class to change the behavior of the action.
+
+__call__(self)link
+This is the method that is called when the action is activated. In many cases, returning a non-None value from the action will cause the current interaction to end.
+
+This method must be overridden, as the default method will raise a NotImplemented exception (and hence cause Ren'Py to report an error).
+
+get_sensitive(self)link
+This is called to determine if the button with this action should be sensitive. It should return true if the button is sensitive.
+
+Note that __call__ can be called, even if this returns False.
+
+The default implementation returns True.
+
+get_selected(self)link
+This should return true if the button should be rendered as a selected button, and false otherwise.
+
+The default implemention returns False.
+
+get_tooltip(self)link
+This gets a default tooltip for this button, if a specific tooltip is not assigned. It should return the tooltip value, or None if a tooltip is not known.
+
+This defaults to returning None.
+
+periodic(self, st)link
+This method is called once at the start of each interaction, and then is called periodically thereafter. If it returns a number, it will be called before that many seconds elapse, but it might be called sooner.
+
+The main use of this is to call renpy.restart_interaction() if the value of get_selected or get_sensitive should change.
+
+It takes one argument:
+
+st
+The number of seconds since the screen or displayable this action is associated with was first shown.
+
+unhovered(self)link
+When the action is used as the hovered parameter to a button (or similar object), this method is called when the object loses focus.
+
+To run an action from Python, use renpy.run().
+
+renpy.is_selected(action)link
+Returns a true value if the provided action or list of actions indicates it is selected, and false otherwise.
+
+renpy.is_sensitive(action)link
+Returns a true value if the provided action or list of actions indicates it is sensitive, and false otherwise.
+
+renpy.run(action)link
+Run an action or list of actions. A single action is called with no arguments, a list of actions is run in order using this function, and None is ignored.
+
+Returns the result of the last action to return a value.
+
+BarValueslink
+When creating a bar, vbar, or hotbar, a BarValue object can be supplied as the value property. Methods on the BarValue object are called to get the adjustment and styles.
+
+classBarValuelink
+To define a new BarValue, inherit from this class and override some of the methods.
+
+get_adjustment(self)link
+This method is called to get an adjustment object for the bar. It should create the adjustment with ui.adjustment(), and then return the object created this way.
+
+This method must be overridden, as the default method will raise NotImplemented (and hence cause Ren'Py to report an error).
+
+get_style(self)link
+This is used to determine the style of bars that use this value. It should return a tuple of two style names or style objects. The first is used for a bar, and the second for vbar.
+
+This defaults to ("bar", "vbar").
+
+get_tooltip(self)link
+This gets a default tooltip for this button, if a specific tooltip is not assigned. It should return the tooltip value, or None if a tooltip is not known.
+
+This defaults to returning None.
+
+replaces(self, other)link
+This is called when a BarValue replaces another BarValue, such as when a screen is updated. It can be used to update this BarValue from the other. It is called before get_adjustment.
+
+Note that other is not necessarily the same type as self.
+
+periodic(self, st)link
+This method is called once at the start of each interaction. If it returns a number of seconds, it will be called before that many seconds elapse, but it might be called sooner. It is called after get_adjustment.
+
+It can be used to update the value of the bar over time, like AnimatedValue() does. To do this, get_adjustment should store the adjustment, and periodic should call the adjustment's changed method.
+
+InputValuelink
+When creating an input, an InputValue object can be supplied as the value property. Methods on the InputValue object are called to get and set the text, determine if the input is editable, and handle the enter key being pressed.
+
+classInputValuelink
+To define a new InputValue, inherit from this class, override some or all of the methods, and set the value of the default field.
+
+editablelink
+If not true, disables the input field from being editable at all.
+
+defaultlink
+If true, the input is eligible to be editable by default. (That is, it may be given the caret when the screen is shown.)
+
+get_text(self)link
+Returns the default text of the input. This must be implemented.
+
+set_text(self, s)link
+Called when the text of the input is changed, with the new text. This must be implemented.
+
+enter(self)link
+Called when the user presses enter. If this returns a non-None value, that value is returned from the interacton. This may also raise renpy.IgnoreEvent() to ignore the press. Otherwise, the enter-press is propagated to other displayables.
+
+The following actions are available as methods on InputValue:
+
+Enable()link
+Returns an action that enables text editing on the input.
+
+Disable()link
+Returns an action that disables text editing on the input.
+
+Toggle()link
+Returns an action that toggles text editing on the input.
+
+Creator-Defined Screen Language Statementslink
+Ren'Py supports defining custom screen language statements. Creator-defined screen language statements are wrappers for the screen language use statement. Positional arguments remain positional arguments, properties become keyword arguments, and if the statement takes a block, so does the use statement. For example, the custom screen language statement:
+
+titledwindow "Test Window":
+    icon "icon.png"
+
+    text "This is a test."
+becomes:
+
+use titledwindow("Test Window", icon="icon.png"):
+    text "This is a test."
+Creator-defined screen language statements must be registered in a python early block. What's more, the filename containing the creator-defined statement must be be loaded earlier than any file that uses it. Since Ren'Py loads files in the Unicode sort order of their paths, it generally makes sense to prefix the name of any file registering a user-defined statement with 01, or some other small number.
+
+Creator-defined screen language statements are registered with the renpy.register_sl_statement function:
+
+classrenpy.register_sl_displayable(name, displayable, style, nchildren=0, scope=False, *, replaces=False, default_keywords={}, default_properties=True, unique=False)link
+Registers a screen language statement that creates a displayable.
+
+name
+The name of the screen language statement, a string containing a Ren'Py keyword. This keyword is used to introduce the new statement.
+
+displayable
+This is a function that, when called, returns a displayable object. All position arguments, properties, and style properties are passed as arguments to this function. Other keyword arguments are also given to this function, a described below.
+
+This must return a Displayable. If it returns multiple displayables, the _main attribute of the outermost displayable should be set to the "main" displayable - the one that children should be added to.
+
+style
+The base name of the style of this displayable. If the style property is not given, this will have the style prefix added to it. The computed style is passed to the displayable function as the style keyword argument.
+
+nchildren
+The number of children of this displayable. One of:
+
+0
+The displayable takes no children.
+
+1
+The displayable takes 1 child. If more than one child is given, the children are placed in a Fixed.
+
+"many"
+The displayable takes more than one child.
+
+unique
+This should be set to true if the function returns a displayable with no other references to it.
+
+The following arguments should be passed in using keyword arguments:
+
+replaces
+If true, and the displayable replaces a prior displayable, that displayable is passed as a parameter to the new displayable.
+
+default_keywords
+The default set of keyword arguments to supply to the displayable.
+
+default_properties
+If true, the ui and position properties are added by default.
+
+Returns an object that can have positional arguments and properties added to it by calling the following methods. Each of these methods returns the object it is called on, allowing methods to be chained together.
+
+add_positional(name)link
+Adds a positional argument with name
+
+add_property(name)link
+Adds a property with name. Properties are passed as keyword arguments.
+
+add_style_property(name)link
+Adds a family of properties, ending with name and prefixed with the various style property prefixes. For example, if called with ("size"), this will define size, idle_size, hover_size, etc.
+
+add_prefix_style_property(prefix, name)link
+Adds a family of properties with names consisting of prefix, a style property prefix, and name. For example, if called with a prefix of text_ and a name of size, this will create text_size, text_idle_size, text_hover_size, etc.
+
+add_property_group(group, prefix='')link
+Adds a group of properties, prefixed with prefix. Group may be one of the strings:
+
+"bar"
+
+"box"
+
+"button"
+
+"position"
+
+"text"
+
+"window"
+
+These correspond to groups of Style Properties. Group can also be "ui", in which case it adds the common ui properties.
+
+classrenpy.register_sl_statement(name, children='many', screen=None)link
+Registers a custom screen language statement with Ren'Py.
+
+name
+This must be a word. It's the name of the custom screen language statement.
+
+children
+The number of children this custom statement takes. This should be 0, 1, or "many", which means zero or more.
+
+screen
+The screen to use. If not given, defaults to name.
+
+Returns an object that can have positional arguments and properties added to it. This object has the same .add_ methods as the objects returned by renpy.register_sl_displayable.
+
+As an example of a creator-defined screen language statement, here's an implementation of the titledwindow statement given above. First, the statement must be registered in a python early block in a file that is loaded early – a name like 01custom.rpy will often load soon enough. The registration call looks like:
+
+python early:
+    renpy.register_sl_statement("titledwindow", children=1).add_positional("title").add_property("icon").add_property("pos")
+Then, we define a screen that implements the custom statement. This screen can be defined in any file. One such screen is:
+
+screen titledwindow(title, icon=None, pos=(0, 0)):
+    drag:
+        pos pos
+
+        frame:
+            background "#00000080"
+
+            has vbox
+
+            hbox:
+                if icon is not None:
+                    add icon
+
+                text title
+
+            null height 15
+
+            transclude
+When are used large property groups like a add_property_group, it makes sense to use the **properties syntax with a properties keyword in some place. For example:
+
+screen titledwindow(title, icon=None, **properties):
+    frame:
+        # When background not in properties it will use it as default value.
+        background "#00000080"
+
+        properties properties
+
+        has vbox
+
+        hbox:
+            if icon is not None:
+                add icon
+
+            text title
+
+        null height 15
+
+        transclude
+
+
+Modeslink
+In Ren'Py, a mode is a concise way of describing the type of an interaction. When a mode is reported to Ren'Py, user-defined callbacks can be run. These calbacks can be used to react to a change in mode, perhaps by reconfiguring the user interface. For example, one can cause a transition to occur when switching from ADV-mode to NVL-mode, or when going to a menu, etc.
+
+The goal of the mode systems is to provide a powerful and flexible way of detecting and responding to these changes.
+
+Default Modeslink
+The following are the modes corresponding to built-in interactions:
+
+start
+This is the mode that Ren'Py is in when a new context is created, such as at the start of a game. Ren'Py never automatically enters this mode, but instead, initializes the list of modes to include start.
+
+say
+The mode Ren'Py enters when an ADV-mode say executes.
+
+menu
+The mode Ren'Py enters when an ADV-mode menu executes.
+
+nvl
+The mode Ren'Py enters when an NVL-mode say executes.
+
+nvl_menu
+The mode Ren'Py enters when an NVL-mode menu executes.
+
+pause
+The mode Ren'Py enters when renpy.pause() is run. This is also the mode Ren'Py is in when a pause statement of indefinite duration occurs.
+
+with
+The mode Ren'Py enters when a transition introduced by the with statement occurs. This is also used for pause statement with a duration specified.
+
+Note that the with mode is entered at the start of the with statement, which is after any preceding scene, show, or hide statements have been run.
+
+screen
+The mode Ren'Py enters when a screen is invoked using the call screen statement.
+
+imagemap
+The mode Ren'Py enters when an old-style imagemap is invoked using renpy.imagemap().
+
+input
+The mode Ren'Py enters when text input is requested using the renpy.input() function.
+
+Other modes can be entered by calling the renpy.mode function.
+
+renpy.get_mode()link
+Returns the current mode, or None if it is not defined.
+
+renpy.mode(mode)link
+Causes Ren'Py to enter the named mode, or stay in that mode if it's already in it.
+
+Mode Callbackslink
+The config.mode_callbacks variable contains a list of mode callbacks that are invoked whenever Ren'Py enters a mode. The mode callbacks are called with two parameters:
+
+mode
+A string giving the name of the mode that we are entering.
+
+old_modes
+A list of strings, giving the modes that the system has previously entered, ordered from most recent to least recent.
+
+Note that when entering a mode we're already in, the first item in old_modes will be equal to mode.
+
+Example Mode Callbackslink
+This mode callback causes transitions to occur when switching from ADV to NVL mode, and vice-versa. This ships as part of Ren'Py, so there's no need to actually use it.
+
+init python:
+    def _nvl_adv_callback(mode, old_modes):
+
+        old = old_modes[0]
+
+        if config.adv_nvl_transition:
+            if mode == "nvl" or mode == "nvl_menu":
+                if old == "say" or old == "menu":
+                    nvl_show(config.adv_nvl_transition)
+
+        if config.nvl_adv_transition:
+            if mode == "say" or mode == "menu":
+                if old == "nvl" or old == "nvl_menu":
+                    nvl_hide(config.nvl_adv_transition)
+
+    config.mode_callbacks.append(_nvl_adv_callback)
+
+
+Creator-Defined Displayableslink
+The most complex, but most powerful, way of customizing Ren'Py's behavior is to use a creator-defined displayable. A creator-defined displayable is allowed to take arbitrary pygame events. It can also render other displayables, and place them at arbitrary locations on the screen. This makes it suitable for creating 2D mini-games that cannot be expressed with the tools Ren'Py gives you. (But see also the section sprites, which describes a higher-level way of accomplishing many of the same things.)
+
+Creator-defined displayables are programmed entirely in Python, and we encourage you to have a reasonable degree of skill at object-oriented Python programming before you begin creating one.
+
+Examplelink
+Here's an example of a creator-defined displayable. This displayable changes renders its child with an alpha that is determined by the distance of the mouse pointer from the center of the child.
+
+init python:
+
+    import math
+
+    class Appearing(renpy.Displayable):
+
+        def __init__(self, child, opaque_distance, transparent_distance, **kwargs):
+
+            # Pass additional properties on to the renpy.Displayable
+            # constructor.
+            super(Appearing, self).__init__(**kwargs)
+
+            # The child.
+            self.child = renpy.displayable(child)
+
+            # The distance at which the child will become fully opaque, and
+            # where it will become fully transparent. The former must be less
+            # than the latter.
+            self.opaque_distance = opaque_distance
+            self.transparent_distance = transparent_distance
+
+            # The alpha channel of the child.
+            self.alpha = 0.0
+
+            # The width and height of us, and our child.
+            self.width = 0
+            self.height = 0
+
+        def render(self, width, height, st, at):
+
+            # Create a transform, that can adjust the alpha channel of the
+            # child.
+            t = Transform(child=self.child, alpha=self.alpha)
+
+            # Create a render from the child.
+            child_render = renpy.render(t, width, height, st, at)
+
+            # Get the size of the child.
+            self.width, self.height = child_render.get_size()
+
+            # Create the render we will return.
+            render = renpy.Render(self.width, self.height)
+
+            # Blit (draw) the child's render to our render.
+            render.blit(child_render, (0, 0))
+
+            # Return the render.
+            return render
+
+        def event(self, ev, x, y, st):
+
+            # Compute the distance between the center of this displayable and
+            # the mouse pointer. The mouse pointer is supplied in x and y,
+            # relative to the upper-left corner of the displayable.
+            distance = math.hypot(x - (self.width / 2), y - (self.height / 2))
+
+            # Base on the distance, figure out an alpha.
+            if distance <= self.opaque_distance:
+                alpha = 1.0
+            elif distance >= self.transparent_distance:
+                alpha = 0.0
+            else:
+                alpha = 1.0 - 1.0 * (distance - self.opaque_distance) / (self.transparent_distance - self.opaque_distance)
+
+            # If the alpha has changed, trigger a redraw event.
+            if alpha != self.alpha:
+                self.alpha = alpha
+                renpy.redraw(self, 0)
+
+            # Pass the event to our child.
+            return self.child.event(ev, x, y, st)
+
+        def visit(self):
+            return [ self.child ]
+To use the creator-defined displayable, we can create an instance of it, and add that instance to the screen.
+
+screen alpha_magic:
+    add Appearing("logo.png", 100, 200):
+        xalign 0.5
+        yalign 0.5
+
+label start:
+    show screen alpha_magic
+
+    "Can you find the logo?"
+
+    return
+renpy.Displayablelink
+A creator-defined displayable is created by subclassing the renpy.Displayable class. A creator-defined displayable must override the render method, and may override other methods as well.
+
+A displayable object must be pickleable, which means it may not contain references to objects that cannot be pickled. Most notably, Render objects cannot be stored in a creator-defined displayable.
+
+Since we expect you to override the methods of the displayable class, we'll present them with the self parameter.
+
+classrenpy.Displayablelink
+Base class for creator-defined displayables.
+
+__init__(**properties)link
+A subclass may override the constructor, perhaps adding new parameters. If it does, it should pass all unknown keyword arguments to the renpy.Displayable constructor, with the call:
+
+super(MyDisplayable, self).__init__(**properties)
+render(self, width, height, st, at)link
+Subclasses must override this, to return a renpy.Render object. The render object determines what, if anything, is shown on the screen.
+
+width, height
+The amount of space available to this displayable, in pixels.
+
+st
+A float, the shown timebase, in seconds. The shown timebase begins when this displayable is first shown on the screen.
+
+at
+A float, the animation timebase, in seconds. The animation timebase begins when an image with the same tag was shown, without being hidden. (When the displayable is shown without a tag, this is the same as the shown timebase.)
+
+The render method is called when the displayable is first shown. It can be called again if renpy.redraw() is called on this object.
+
+event(self, ev, x, y, st)link
+The event method is called to pass a pygame event to the creator-defined displayable. If the event method returns a value other than None, that value is returned as the result of the interaction. If the event method returns None, the event is passed on to other displayables.
+
+To ignore the event without returning None, raise renpy.IgnoreEvent.
+
+The event method exists on other displayables, allowing the creator-defined displayable to pass on the event.
+
+ev
+An event object
+
+x, y
+The x and y coordinates of the event, relative to the upper-left corner of the displayable. These should be used in preference to position information found in the pygame event objects.
+
+st
+A float, the shown timebase, in seconds.
+
+An event is generated at the start of each interaction, and renpy.timeout() can be used to cause another event to occur.
+
+per_interact(self)link
+This method is called at the start of each interaction. It can be used to trigger a redraw, and probably should be used to trigger a redraw if the object participates in rollback.
+
+visit(self)link
+If the displayable has child displayables, this method should be overridden to return a list of those displayables. This ensures that the per_interact methods of those displayables are called, and also allows images used by those displayables to be predicted.
+
+place(self, dest, x, y, width, height, surf, main=True)link
+This places a render (which must be of this displayable) within a bounding area. Returns an (x, y) tuple giving the location the displayable was placed at.
+
+dest
+If not None, the surf will be blitted to dest at the computed coordinates.
+
+x, y, width, height
+The bounding area.
+
+surf
+The render to place.
+
+main
+This is passed to Render.blit().
+
+renpy.Renderlink
+Creator-defined displayables work with renpy.Render objects. Render objects are returned by calling the renpy.render() function on a displayable. A creator-defined displayable should create a Render object by calling renpy.Render from its render method.
+
+Since the render object isn't intended to be subclassed, we will omit the implicit self parameter.
+
+classrenpy.Render(width, height)link
+Creates a new Render object.
+
+width, height
+The width and height of the render object, in pixels.
+
+blit(source, pos, main=True)link
+Draws another render object into this render object.
+
+source
+The render object to draw.
+
+pos
+The location to draw into. This is an (x, y) tuple with the coordinates being pixels relative to the upper-left corner of the target render.
+
+main
+A keyword-only parameter. If true, source will be displayed in the style inspector.
+
+place(d, x=0, y=0, width=None, height=None, st=None, at=None, render=None, main=True)link
+Renders d, a displayable, and places it into the rectangle defined by the x, y, width, and height, using Ren'Py's standard placement algorithm. Returns an (x, y) tuple giving the location the displayable was placed at. Location is computed by calling Displayable.place() method.
+
+x, y, width, height
+The rectangle to place in. If width or height, when None, are the width and height of this render, respectively.
+
+st, at
+The times passed to Render. If None, defaults to the times passed to the render method calling this method.
+
+render
+If not None, this is used instead of rendering d.
+
+main
+As for .blit().
+
+canvas()link
+Returns a canvas object. A canvas object has methods corresponding to the pygame.draw functions, with the first parameter (the surface) omitted.
+
+Canvas objects also have a get_surface() method that returns the pygame Surface underlying the canvas.
+
+get_size()link
+Returns a (width, height) tuple giving the size of this render.
+
+subsurface(rect)link
+Returns a render consisting of a rectangle cut out of this render.
+
+rect
+A (x, y, width, height) tuple.
+
+zoom(xzoom, yzoom)link
+Sets the zoom level of the children of this displayable in the horizontal and vertical axes. Only the children of the displayable are zoomed – the width, height, and blit coordinates are not zoomed.
+
+The following attributes and methods are only used when model-based rendering is enabled:
+
+meshlink
+This field enables model-based rendering for this Render. If true:
+
+If set to True:
+
+All of the children of this displayable are rendered to textures.
+
+A mesh the size of the first child is assocated with this displayable.
+
+A model is created with the mesh, shaders, uniforms, and properties associated with this Render.
+
+The model will then be drawn in a single operation.
+
+add_shader(shader)link
+This causes the shader part shader to be used when this Render or its children are drawn. The part should be a string, or can be a string beginning with "-" to prevent a shader from being drawn.
+
+add_uniform(name, value)link
+Causes the uniform name to have value when this Render or its children are drawn.
+
+add_property(name, value)link
+Causes the GL property name to have value when this Render or one of its children are drawn.
+
+Utility Functions and Classeslink
+renpy.displayable(d, scope=None)link
+This takes d, which may be a displayable object or a string. If it's a string, it converts that string into a displayable using the usual rules.
+
+renpy.end_interaction(value)link
+If value is not None, immediately ends the current interaction, causing the interaction to return value. If value is None, does nothing.
+
+This can be called from inside the render and event methods of a creator-defined displayable.
+
+renpy.is_pixel_opaque(d, width, height, st, at, x, y)link
+Returns whether the pixel at (x, y) is opaque when this displayable is rendered by renpy.render(d, width, height, st, at).
+
+renpy.load_image(im)link
+Loads the image manipulator im using the image cache, and returns a render.
+
+renpy.load_rgba(data, size)link
+Loads the image data bytes into a texture of size size, and return it.
+
+data
+Should be a bytes object containing the image data in RGBA8888 order.
+
+renpy.load_surface(im)link
+Loads the image manipulator im using the image cache, and returns a pygame Surface.
+
+renpy.map_event(ev, keysym)link
+Returns true if the pygame event ev matches keysym
+
+keysym
+One of:
+
+The name of a keybinding in config.keymap.
+
+A keysym, as documented in the Customizing the Keymap section.
+
+A list containing one or more keysyms.
+
+renpy.render(d, width, height, /, st, at)link
+Causes a displayable to be rendered, and a renpy.Render object to be returned.
+
+d
+The displayable to render.
+
+width, height
+The width and height available for the displayable to render into.
+
+st, at
+The shown and animation timebases.
+
+Renders returned by this object may be cached, and should not be modified once they have been retrieved.
+
+renpy.timeout(seconds)link
+Causes an event to be generated before seconds seconds have elapsed. This ensures that the event method of a user-defined displayable will be called.
+
+renpy.redraw(d, when)link
+Causes the displayable d to be redrawn (the render method called) when when seconds have elapsed. The displayable may be redrawn before that time (for example, when a child is redrawn), in which case a pending redraw is forgotten.
+
+exceptionrenpy.IgnoreEventlink
+This is an exception that, if raised, causes Ren'Py to ignore the event. To raise this inside the event method, write:
+
+raise renpy.IgnoreEvent()
+
+
+reator-Defined Statementslink
+Creator-Defined Statements (CDS) allow you to add your own statements to Ren'Py's scripting language. This makes it possible to add functionality that is not supported by the current syntax.
+
+CDS can be more flexible than the direct Python code equivalent.
+
+For example, picking a line of dialogue at random:
+
+label introduction:
+    python:
+        greetings = ['Hello.', 'Welcome.', 'Can I help you?']
+        greeting = renpy.random.choice(greetings)
+
+    "[greeting]"
+Ren'Py's parser does not know ahead of time what happens in the python block or how it should be executed. It does not do anything with this code until execution and triggers an error if an exception occurs.
+
+Using a CDS allows you to:
+
+Check the correctness of the parsed syntax (For example, check that the items in the list sent to renpy.random.choice have valid text)
+
+Ignore incorrect data at execution (For non-critical functions, it is often better to skip the execution than to throw an exception)
+
+Predict Displayables (If the function uses them)
+
+Give you addition information during Lint (If at runtime an error was ignored you can have a report here).
+
+For example, the above behaviour, but written as a CDS:
+
+python early:
+    def parse_random(lexer):
+        subblock_lexer = lexer.subblock_lexer()
+        choices = []
+
+        while subblock_lexer.advance():
+            with subblock_lexer.catch_error():
+                statement = subblock_lexer.renpy_statement()
+                choices.append(statement)
+
+        return choices
+
+
+    def next_random(choices):
+        return renpy.random.choice(choices)
+
+
+    def lint_random(parsed_object):
+        for i in parsed_object:
+            renpy.error(renpy.check_text_tags(i.what))
+
+
+    renpy.register_statement(
+        name="random",
+        block=True,
+        parse=parse_random,
+        next=next_random,
+        lint=lint_random,
+    )
+random is now available as a statement:
+
+label introduction:
+    random:
+        "Hello."
+        "Welcome."
+        "Can I help you?"
+Using a CDS does not guarantee that the execution will be successful, but the better you code your statement, the better Ren'Py can "understand" what you expect from it.
+
+Usagelink
+Creator-Defined Statements (CDS) must conform to the following rules:
+
+They must be defined in a python early block.
+
+They cannot be used in the same file in which they are defined.
+
+The file containing the CDS must be loaded earlier than any file that uses it. (Since Ren'Py loads files in the Unicode sort order of their path, it generally makes sense to prefix the name of any file containing a CDS with 01 or some other small number.)
+
+Creator-Defined Statements are registered using the renpy.register_statement() function. This functions takes other functions that perform operations on the content of the CDS.
+
+For example, a new statement named line that allows lines of text to be specified without quotes.
+
+line e "These quotes will show up," Eileen said, "and don't need to be backslashed."
+The parse function will be sent the lexed content for parsing. The execute function should run an operation on the parsed content. The lint function should report any errors in the parsed content.
+
+python early:
+    def parse_smartline(lexer):
+        who = lexer.simple_expression()
+        what = lexer.rest()
+        return (who, what)
+
+    def execute_smartline(parsed_object):
+        who, what = parsed_object
+        renpy.say(eval(who), what)
+
+    def lint_smartline(parsed_object):
+        who, what = parsed_object
+        try:
+            eval(who)
+        except Exception:
+            renpy.error("Character not defined: {}".format(who))
+
+        tte = renpy.check_text_tags(what)
+        if tte:
+            renpy.error(tte)
+
+    renpy.register_statement(
+        "line",
+        parse=parse_smartline,
+        execute=execute_smartline,
+        lint=lint_smartline,
+    )
+API Referencelink
+renpy.register_statement(name, parse=None, lint=None, execute=None, predict=None, next=None, scry=None, block=False, init=False, translatable=False, execute_init=None, init_priority=0, label=None, warp=None, translation_strings=None, force_begin_rollback=False, post_execute=None, post_label=None, predict_all=True, predict_next=None, execute_default=None, reachable=None)link
+This registers a user-defined statement.
+
+name
+This is either a space-separated list of names that begin the statement, or the empty string to define a new default statement (the default statement will replace the say statement).
+
+block
+When this is False, the statement does not expect a block. When True, it expects a block, but leaves it up to the lexer to parse that block. If the string "script", the block is interpreted as containing one or more Ren'Py script language statements. If the string "possible", the block expect condition is determined by the parse function.
+
+parse
+This is a function that takes a Lexer object. This function should parse the statement, and return an object. This object is passed as an argument to all the other functions.
+
+lint
+This is called to check the statement. It is passed a single argument, the object returned from parse. It should call renpy.error to report errors.
+
+execute
+This is a function that is called when the statement executes. It is passed a single argument, the object returned from parse.
+
+execute_init
+This is a function that is called at init time, at priority 0. It is passed a single argument, the object returned from parse.
+
+predict
+This is a function that is called to predict the images used by the statement. It is passed a single argument, the object returned from parse. It should return a list of displayables used by the statement.
+
+next
+This is a function that is called to determine the next statement.
+
+If block is not "script", this is passed a single argument, the object returned from the parse function. If block is "script", an additional argument is passed, an object that names the first statement in the block.
+
+The function should return either a string giving a label to jump to, the second argument to transfer control into the block, or None to continue to the statement after this one. It can also return the result of Lexer.renpy_statement() or Lexer.renpy_block() when called in the parse function.
+
+label
+This is a function that is called to determine the label of this statement. If it returns a string, that string is used as the statement label, which can be called and jumped to like any other label.
+
+warp
+This is a function that is called to determine if this statement should execute during warping. If the function exists and returns true, it's run during warp, otherwise the statement is not run during warp.
+
+scry
+Used internally by Ren'Py.
+
+init
+True if this statement should be run at init-time. (If the statement is not already inside an init block, it's automatically placed inside an init block.)
+
+You probably don't want this if you have an execute_init function, as wrapping the statement in an init block will cause the execute_init and execute functions to be called at the same time.
+
+init_priority
+An integer that determines the priority of initialization of the init block created by init and execute_init function.
+
+translation_strings
+A function that is called with the parsed block. It's expected to return a list of strings, which are then reported as being available to be translated.
+
+force_begin_rollback
+This should be set to true on statements that are likely to cause the end of a fast skip, similar to menu or call screen.
+
+post_execute
+A function that is executed as part the next statement after this one. (Adding a post_execute function changes the contents of the RPYC file, meaning a Force Compile is necessary.)
+
+post_label
+This is a function that is called to determine the label of this the post execute statement. If it returns a string, that string is used as the statement label, which can be called and jumped to like any other label. This can be used to create a unique return point.
+
+predict_all
+If True, then this predicts all sub-parses of this statement and the statement after this statement.
+
+predict_next
+This is called with a single argument, the label of the statement that would run after this statement.
+
+This should be called to predict the statements that can run after this one. It's expected to return a list of of labels or SubParse objects. This is not called if predict_all is true.
+
+execute_default
+This is a function that is called at the same time the default statements are run - after the init phase, but before the game starts; when the a save is loaded; after rollback; before lint; and potentially at other times.
+
+This is called with a single argument, the object returned from parse.
+
+reachable
+This is a function that is called to allow this statement to customize how it participates in lint's reachability analysis.
+
+By default, a statement's custom block, sub-parse blocks created with Lexer.renpy_block(), and the statement after the statement are reachable if the statement itself is reachable. The statement is also reachable if it has a label function.
+
+This can be customized by providing a reachable function. This is a function that takes five arguments (in the following, a "label" may be a string or an opaque object):
+
+The object returned by the parse function.
+
+A boolean that is true if the statement is reachable.
+
+The label of the statement.
+
+The label of the next statement, or None if there is no next statement.
+
+If block is set to "script", the label of the first statement in the block, or None if there is no block.
+
+It's expected to return a set that may contain:
+
+A label or subparse object of a statement that is reachable.
+
+True, to indicate that this statement should not be reported by lint, but is not intrinsically reachable. (It will become reachable if it is reported reachable by another statement.)
+
+None, which is ignored.
+
+This function may be called multiple times with both value of is_reachable, to allow the statement to customize its behavior based on whether it's reachable or not. (For example, the next statement may only be reachable if this statement is.)
+
+Warning
+
+Using the empty string as the name to redefine the say statement is usually a bad idea. That is because when replacing a Ren'Py native statement, its behavior depends on the Statement Equivalents. In the case of the say statement, these equivalents do not support the id and translation systems. As a result, a game redefining the default statement will not be able to use these features (short of reimplementing them entirely).
+
+Lexer objectlink
+A custom statement's parse function takes an instance of a Lexer object.
+
+classLexerlink
+error(msg)link
+Parameters
+msg (str) -- Message to add to the list of detected parsing errors.
+
+Add msg (with the current position) to the list of detected parsing errors. This interrupts the parsing of the current statement, but does not prevent further parsing.
+
+require(thing, name=None)link
+Try to parse thing and report an error if it cannot be done.
+
+If thing is a string, try to parse it using match().
+
+Otherwise, thing must be another method on this lexer object which is called without arguments.
+
+If name is not specified, the name of the method will be used in the message (or thing if it's a string), otherwise name will be used.
+
+eol()link
+Returns
+True if the lexer is at the end of the line, else False.
+
+Return type
+bool
+
+expect_eol()link
+If not at the end of the line, raise an error.
+
+expect_noblock(stmt)link
+Called to indicate this statement does not expect a block. If a block is found, raise an error. stmt should be a string, it will be added to the message with an error.
+
+expect_block(stmt)link
+Called to indicate that the statement requires that a non-empty block is present. stmt should be a string, it will be added to the message with an error.
+
+has_block()link
+Returns
+True if the current line has a non-empty block, else False.
+
+Return type
+bool
+
+match(re)link
+Match an arbitrary regexp string.
+
+All of the statements in the lexer that match things are implemented in terms of this function. They first skip whitespace, then attempt to match against the line. If the match succeeds, the matched text is returned. Otherwise, None is returned, and the state of the lexer is unchanged.
+
+keyword(s)link
+Match s as a keyword.
+
+name()link
+Match a name. This does not match built-in keywords.
+
+word()link
+Returns
+The text of the matched word.
+
+Return type
+str
+
+Match any word, including keywords.
+
+image_name_component()link
+Match an image name component. Unlike a word, an image name component can begin with a number.
+
+string()link
+Match a Ren'Py string.
+
+integer()link
+Returns
+String containing the found integer.
+
+Return type
+str
+
+Match an integer.
+
+float()link
+Returns
+String containing the found floating point number.
+
+Return type
+str
+
+Match a floating point number.
+
+label_name(declare=False)link
+Match a label name, either absolute or relative. If declare is true, then the global label name is set. (Note that this does not actually declare the label - the statement is required to do that by returning it from the label function.)
+
+simple_expression()link
+Match a simple Python expression, returns it as a string. This is often used when you expect a variable name. It is not recommended to change the result. The correct action is to evaluate the result in the future.
+
+delimited_python(delim)link
+Match a Python expression that ends in a delim, for example ':'. This is often used when you expect a condition until the delimiter. It is not recommended to change the result. The correct action is to evaluate the result in the future. This raises an error if end of line is reached before the delimiter.
+
+arguments()link
+This must be called before the parentheses with the arguments list, if they are not specified returns None, otherwise returns an object representing the arguments to a function call. This object has an evaluate method on it that takes an optional scope dictionary, and returns a tuple in which the first component is a tuple of positional arguments, and the second component is a dictionary of keyword arguments.
+
+rest()link
+Skip whitespace, then return the rest of the line.
+
+checkpoint()link
+Return an opaque object representing the current state of the lexer.
+
+revert(o)link
+When o is the object returned from checkpoint(), reverts the state of the lexer to what it was when checkpoint() was called. (This is used for backtracking.)
+
+subblock_lexer()link
+Returns
+A Lexer for the block associated with the current line.
+
+advance()link
+In a subblock lexer, advance to the next line. This must be called before the first line, so the first line can be parsed. Return True if we've successfully advanced to a line in the block, or False if we have advanced beyond all lines in the block.
+
+renpy_statement()link
+When called, this parses the current line as a Ren'Py script statement, generating an error if this is not possible. This method returns an opaque object that can be returned from the next function passed to renpy.register_statement(), or passed to renpy.jump() or renpy.call(). This object should not be stored except as part of the parse result of the statement.
+
+When the statement returned from this completes, control is transferred to the statement after the creator-defined statement. (Which might be the statement created using post_execute).
+
+renpy_block(empty=False)link
+Parse all of the remaining lines in the current block as Ren'Py script, and return a SubParse corresponding to the first statement in the block. The block is chained together such that all statements in the block are run, and then control is transferred to the statement after this creator-defined statement.
+
+Note that this parses the current block. In the more likely case that you'd like to parse the subblock of the current statement, the correct way to do that is:
+
+def mystatement_parse(l):
+
+    l.require(':')
+    l.expect_eol()
+    l.expect_block("mystatement")
+
+    child = l.subblock_lexer().renpy_block()
+
+    return { "child" : child }
+empty
+If True, allows an empty block to be parsed. (An empty block is equivalent to a block with a single pass statement.)
+
+If False, an empty block triggers an error.
+
+catch_error()link
+This is a context decorator, used in conjunction with the with statement, that catches and reports lexer errors inside its context block, then continues after the block.
+
+Here's an example of how it can be used to report multiple errors in a single subblock.
+
+def mystatement_parse(l):
+
+    l.require(':')
+    l.expect_eol()
+    l.expect_block("mystatement")
+
+    strings = [ ]
+    ll = l.subblock_lexer()
+
+    while ll.advance():
+        with ll.catch_error():
+            strings.append(ll.require(ll.string))
+            ll.expect_noblock("string inside mystatement")
+            ll.expect_eol()
+
+    return { "strings" : strings }
+Lint Utility Functionslink
+These functions are useful when writing lint functions.
+
+renpy.check_text_tags(s)link
+Checks the text tags in s for correctness. Returns an error string if there is an error, or None if there is no error.
+
+renpy.error(msg)link
+Reports msg, a string, as as error for the user. This is logged as a parse or lint error when approprate, and otherwise it is raised as an exception.
+
+renpy.try_compile(where, expr, additional=None)link
+Tries to compile an expression, and writes an error to lint.txt if it fails.
+
+where
+A string giving the location the expression is found. Used to generate an error message of the form "Could not evaluate expr in where."
+
+expr
+The expression to try compiling.
+
+additional
+If given, an additional line of information that is addded to the error message.
+
+renpy.try_eval(where, expr, additional=None)link
+Tries to evaluate an expression, and writes an error to lint.txt if it fails.
+
+where
+A string giving the location the expression is found. Used to generate an error message of the form "Could not evaluate expr in where."
+
+expr
+The expression to try evaluating.
+
+additional
+If given, an additional line of information that is addded to the error message.
+
+
+
+Custom Text Tagslink
+Ren'Py has support for defining your own text tags. These text tags can manipulate the text and text tags defined within, including adding and removing text and other text tags.
+
+Custom text tags are created by assigning a text tag function to an entry in the config.custom_text_tags dictionary or the config.self_closing_custom_tags dictionary.
+
+define config.custom_text_tags = { }link
+Maps text tag names to text tag functions, when the text tag can wrap other text.
+
+define config.self_closing_custom_text_tags = { }link
+Maps text tag names to a self-closing text tag functions, when the text tag does not wrap other text.
+
+A text tag function takes three arguments: The tag itself, the argument for the tag, and a list of content tuples. For example, for the text:
+
+"{big=2}Hello, {b}World{/b}{/big}"
+The tag will be "big", the argument will be the string "2", and the list of content tuples will be:
+
+[
+    (renpy.TEXT_TEXT, "Hello, "),
+    (renpy.TEXT_TAG, "b"),
+    (renpy.TEXT_TEXT, "World"),
+    (renpy.TEXT_TAG, "/b"),
+]
+The text tag function should return a new list of content tuples, which is used to replace the text tag and its contents.
+
+Content tuples consist of two components. The first component is one of the the constants in the following list. The second component varies based on the first component, as described below.
+
+renpy.TEXT_TEXT
+The second component is text that is intended for display to the user.
+
+renpy.TEXT_TAG
+The second component is the contents of a text tag, without the enclosing braces.
+
+renpy.TEXT_DISPLAYABLE
+The second component is a displayable to be embedded into the text.
+
+renpy.TEXT_PARAGRAPH
+This represents a break between paragraphs, and the second component is undefined (but must be present).
+
+A self-closing text tag function is similar, except that it does not take the third argument.
+
+Lists of tokens can be passed to Text() when its tokenized argument is True.
+
+Caveatslink
+The dialogue text tags {p}, {w}, {nw}, and {fast} are processed before custom text tags, and should either be not included inside a custom text tag, or passed through unchanged.
+
+Exampleslink
+The example big text tag works like the {size} text tag, but applies a multiplier to its argument.
+
+init python:
+
+    def big_tag(tag, argument, contents):
+
+        size = int(argument) * 20
+
+        return [
+                (renpy.TEXT_TAG, u"size={}".format(size)),
+            ] + contents + [
+                (renpy.TEXT_TAG, u"/size"),
+            ]
+
+    config.custom_text_tags["big"] = big_tag
+
+
+"This is {big=3}BIG!{/big}"
+The example rot13 text tag applies the ROT13 transform to text. Note that ROT26 – ROT13 applied twice – is just normal text.
+
+init python:
+
+    def rot13_transform(s):
+
+        ROT13 = { }
+
+        for i, j in zip("ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"):
+             ROT13[i] = j
+             ROT13[j] = i
+
+             i = i.lower()
+             j = j.lower()
+
+             ROT13[i] = j
+             ROT13[j] = i
+
+        return "".join(ROT13.get(i, i) for i in s)
+
+    def rot13_tag(tag, argument, contents):
+        rv = [ ]
+
+        for kind, text in contents:
+
+            if kind == renpy.TEXT_TEXT:
+                text = rot13_transform(text)
+
+            rv.append((kind, text))
+
+        return rv
+
+    config.custom_text_tags["rot13"] = rot13_tag
+
+"Rot0. {rot13}Rot13. {rot13}Rot26. {/rot13}Rot13. {/rot13}Rot0."
+The bang text tag inserts a specific image into the text, and doesn't require a closing tag.
+
+init python:
+    def bang_tag(tag, argument):
+        return [ ( renpy.TEXT_TAG, "size=40"), (renpy.TEXT_TEXT, "!"), (renpy.TEXT_TAG, "/size") ]
+
+    config.self_closing_custom_text_tags["bang"] = bang_tag
+
+"This is awesome{bang}"
+
+
+Character Callbackslink
+Ren'Py includes the ability to execute callbacks when various events occur during dialogue. This is done by giving the callback argument to Character(), or setting the config.character_callback or config.all_character_callbacks variables.
+
+The character callback is called with a single positional argument, the event that occured. Possible events are:
+
+"begin"
+Called at the start of a say statement.
+
+"show"
+Called before showing each segment of dialogue. Dialogue may be separated into multiple segments by the {w} or {p} text tags, but always consists of at least one segment.
+
+"show_done"
+Called after showing each segment of dialogue.
+
+"slow_done"
+Called after slow text finishes showing. Note that this event may occur after "end", in cases where dialogue does not cause an interaction to occur.
+
+"end"
+Called at the end of a say statement.
+
+The callback is called with at least one keyword argument:
+
+interact
+This is true if the dialogue causes an interaction to occur.
+
+Other values of the positional argument and additional keyword arguments may be supplied in the future. The callback should be written to ignore arguments it does not understand.
+
+Examplelink
+This example plays beeps in place of a character voice, when slow text is enabled:
+
+init python:
+    def beepy_voice(event, interact=True, **kwargs):
+        if not interact:
+            return
+
+        if event == "show_done":
+            renpy.sound.play("beeps.ogg")
+        elif event == "slow_done":
+            renpy.sound.stop()
+
+define pike = Character("Christopher Pike", callback=beepy_voice)
+
+label start:
+
+    pike "So, hanging out on Talos IV, minding my own business, when..."
+This is an example of how to specialize a general callback for specific characters:
+
+init python:
+    import functools
+    def boopy_voice(event, interact=True, boopfile="normal_boop.ogg", **kwargs):
+        if not interact:
+            return
+
+        if event == "show_done":
+            renpy.sound.play(boopfile)
+        elif event == "slow_done":
+            renpy.sound.stop()
+
+define nagata = Character("Naomi", callback=functools.partial(boopy_voice, boopfile="belter_boop.ogg"))
+define chrisjen = Character("Chrisjen", callback=boopy_voice)
+
+File Accesslink
+These Python functions allow you to access asset files, which may be found in the game directory, RPA archives, or as Android assets.
+
+renpy.file(fn, encoding=None)link
+An alias for renpy.open_file(), for compatibility with older versions of Ren'Py.
+
+renpy.list_files(common=False)link
+Lists the files in the game directory and archive files. Returns a list of files, with / as the directory separator.
+
+common
+If true, files in the common directory are included in the listing.
+
+renpy.loadable(filename, directory=None)link
+Returns True if the given filename is loadable, meaning that it can be loaded from the disk or from inside an archive. Returns False if this is not the case.
+
+directory
+If not None, a directory to search in if the file is not found in the game directory. This will be prepended to filename, and the search tried again.
+
+renpy.open_file(fn, encoding=None, directory=None)link
+Returns a read-only file-like object that accesses the file named fn. The file is accessed using Ren'Py's standard search method, and may reside in the game directory, in an RPA archive, or as an Android asset.
+
+The object supports a wide subset of the fields and methods found on Python's standard file object, opened in binary mode. (Basically, all of the methods that are sensible for a read-only file.)
+
+encoding
+If given, the file is open in text mode with the given encoding. If None, the default, the encoding is taken from config.open_file_encoding. If False, the file is opened in binary mode.
+
+directory
+If not None, a directory to search in if the file is not found in the game directory. This will be prepended to filename, and the search tried again.
+
+Rarely Usedlink
+These functions are used more rarely.
+
+renpy.exists(filename)link
+Returns true if the given filename can be found in the searchpath. This only works if a physical file exists on disk. It won't find the file if it's inside of an archive.
+
+You almost certainly want to use renpy.loadable() in preference to this function.
+
+renpy.fsdecode(s)link
+Converts s from filesystem encoding to unicode.
+
+renpy.fsencode(s, force=False)link
+Converts s from unicode to the filesystem encoding.
+
+renpy.image_size(im)link
+Given an image manipulator, loads it and returns a (width, height) tuple giving its size.
+
+This reads the image in from disk and decompresses it, without using the image cache. This can be slow.
+
+Color Classlink
+Ren'Py has a Color class that can be used for converting from one color space to another, or performing various color theory operations. Colors are immutable, and can be used wherever a color tuple can be used.
+
+Color tuples operate in one of three color spaces.
+
+RGB - Red, Green, Blue
+
+HLS - Hue, Lightness, Saturation
+
+HSV - Hue, Saturation, Value
+
+As an example of some of the calculations that can be performed, all of the following colors are bright green:
+
+# Standard Ren'Py Colors.
+Color("#0f0")
+Color("#00ff00")
+Color((0, 255, 0, 255))
+
+# Convert from other color spaces.
+Color(hls=(.333, 0.5, 1.0))
+Color(hsv=(.333, 1.0, 1.0))
+
+# Turns red into green via a method that returns a new color.
+Color("#f00").rotate_hue(.333)
+classColor(color=None, hls=None, hsv=None, rgb=None, alpha=1.0)link
+The Color class is used to represent and manipulate colors and convert between various color spaces. It also represents opacity in the form of an alpha.
+
+When creating a Color, at most one of the color, hls, hsv, or rgb arguments should be supplied. (If all are None, None is returned.)
+
+color
+The color, in one of the standard formats Ren'Py understands. These are:
+
+A Color object.
+
+An (r, g, b) or (r, g, b, a) tuple, in which all the numbers are between 0 and 255.
+
+A string giving a hexadecimal color, in the form "#rgb", "#rgba", "#rrggbb", or "#rrggbbaa".
+
+hls
+A color in the hue-lightness-saturation color space. This should be supplied a three-component tuple, where each component is between 0.0 and 1.0.
+
+hsv
+A color in the hue-saturation-value color space. This should be supplied a three-component tuple, where each component is between 0.0 and 1.0.
+
+rgb
+A color in the red-green-blue color space. This should be supplied a three-component tuple, where each component is between 0.0 and 1.0.
+
+If the supplied color does not contain an alpha value, alpha is used. alpha must be between 0.0 and 1.0.
+
+Color objects can be used as 4-component tuples, where the components are (red, green, blue, and alpha). When used as a tuple, the value of each component is between 0 and 255.
+
+Color objects support the +, -, and * operators, representing component-wise addition, subtraction, and multiplication. Some uses of these operators can cause the creation of colors with components that are not in the supported range. Such colors should not be passed to other parts of Ren'Py. (The normalize method can be called to return a new color with the components limited to the proper range.)
+
+A Color object has the following properties:
+
+hlslink
+Returns the color as a tuple of three floating point numbers giving hue, lightness, and saturation. Each component ranges between 0.0 and 1.0.
+
+hsvlink
+Returns the color as a tuple of three floating point numbers giving hue, saturation, and value. Each component ranges between 0.0 and 1.0.
+
+rgblink
+Returns the color as a tuple of three floating point numbers giving the red, green, and blue components. Each component ranges between 0.0 and 1.0.
+
+rgbalink
+Returns the color as a tuple of four floating point numbers giving the red, green, blue and alpha components as 0.0 to 1.0 values.
+
+alphalink
+Returns the alpha (opacity) of this Color as a number between 0.0 and 1.0, where 0.0 is transparent and 1.0 is opaque.
+
+hexcodelink
+Returns a string containing a hex color code of the form #rrggbbaa or #rrggbb.
+
+Color objects have the following methods. Since Colors are immutable, these methods always return a new Color object.
+
+interpolate(other, fraction)link
+Interpolates between this Color and other in the RGB color space, returning a new Color as the result. If fraction is 0.0, the result is the same as this color, if 1.0, it is the same as other.
+
+interpolate_hls(other, fraction)link
+Interpolates between this Color and other in the HLS color space, returning a new Color as the result. If fraction is 0.0, the result is the same as this color, if 1.0, it is the same as other.
+
+other may be a string, Color or an HLS tuple.
+
+interpolate_hsv(other, fraction)link
+Interpolates between this Color and other in the HSV color space, returning a new Color as the result. If fraction is 0.0, the result is the same as this color, if 1.0, it is the same as other.
+
+other may be a string, Color or an HSV tuple.
+
+multiply_hls_saturation(saturation)link
+Multiplies this color's saturation by saturation, and returns the result as a new Color. This is performed in the HLS color space.
+
+multiply_hsv_saturation(saturation)link
+Multiplies this color's saturation by saturation, and returns the result as a new Color. This is performed in the HSV color space.
+
+multiply_value(value)link
+Multiples this color's value by value and returns the result as a new Color. This is performed in the HSV color space.
+
+normalize()link
+Returns a normalized version of this Color where all components fall between 0 and 255.
+
+opacity(opacity)link
+Multiplies the alpha channel of this color by opacity, and returns the new color.
+
+replace_hls_saturation(saturation)link
+Replaces this color's saturation with saturation, and returns the result as a new Color. This is performed in the HLS color space.
+
+replace_hsv_saturation(saturation)link
+Replace this color's saturation with saturation, and returns the result as a new Color. This is performed in the HSV color space.
+
+replace_hue(hue)link
+Replaces this color's hue with hue, which should be between 0.0 and 1.0. Returns the new Color.
+
+replace_lightness(lightness)link
+Replaces this color's lightness with lightness, and returns the result as a new Color. This is performed in the HLS color space.
+
+replace_opacity(opacity)link
+Replaces this color's alpha channel with opacity, and returns the result as a new Color.
+
+replace_value(value)link
+Replaces this color's value with value and returns the result as a new Color. This is performed in the HSV color space.
+
+rotate_hue(rotation)link
+Rotates this color's hue by rotation, and returns the new Color. rotation is a fraction of a full rotation (between 0.0 and 1.0). Divide by 360.0 to convert to degrees.
+
+shade(fraction)link
+Creates a shade of this color by mixing it with black. fraction is the fraction of this color that is in the new color. If fraction is 1.0, the color is unchanged, if 0.0, black is returned.
+
+The alpha channel is unchanged.
+
+tint(fraction)link
+Creates a tint of this color by mixing it with white. fraction is the fraction of this color that is in the new color. If fraction is 1.0, the color is unchanged, if 0.0, white is returned.
+
+The alpha channel is unchanged.
+
+
+
+Matrixlink
+classMatrix(l)link
+This represents a 4x4 matrix, that is used in various places in Ren'Py.
+
+When used to transform coordinates, the 16 elements of this matrix are:
+
+xdx, xdy, xdz, xdw,
+ydx, ydy, ydz, ydw,
+zdx, zdy, zdz, zdw,
+wdx, wdy, wdz, wdw
+where x' = xdx * x + xdy * y + xdz * z + xdw * w, where x is the original value of x and x' is the transformed value, and similarly for x, y, z, and w. This is usually applied to a position where w is 1, allowing any combination of translation, rotation, and scaling to be expressed in a single matrix.
+
+When used to transform colors, the 16 elements of this matrix are:
+
+rdr, rdg, rdb, rda,
+gdr, gdg, gdg, gda,
+bdr, bdg, bdb, bda,
+adr, adg, adb, ada,
+For the red, green, blue, and alpha channels.
+
+Matrix objects can be multiplied using the Python multiplication operator, to generate a matrix that performs both operations. The order in which the matrixes appear can matter. Assuming v is a position or color being transformed:
+
+(step2 * step1) * v
+is equivalent to:
+
+step2 * (step1 * v)
+l
+This can be a list of 4, 9, or 16 numbers that is used to introduce this matrix. If not the full 16, the top-left corner of the matrix is initialized, with zdz and wdw set to 1.0 if not given. For example:
+
+Matrix([ 1, 2, 3, 4 ])
+would result in the Matrix:
+
+1.0, 2.0, 0.0, 0.0,
+3.0, 4.0, 0.0, 0.0,
+0.0, 0.0, 1.0, 0.0,
+0.0, 0.0, 0.0, 1.0,
+Matrix.identity()link
+Returns an identity matrix.
+
+Matrix.offset(x, y, z)link
+Returns a matrix that offsets the vertex by a fixed amount.
+
+Matrix.perspective(w, h, n, p, f)link
+Returns a matrix suitable for the perspective projection of an image in the Ren'Py coordinate system. This is a view into the a coordinate system where, where when z=0, (0, 0) corresponds to the top-left corner of the screen, and (w, h) corresponds to the bottom-right corner of the screen.
+
+w, h
+The width and height of the input plane, in pixels.
+
+n
+The distance of the near plane from the camera.
+
+p
+How far the z=0 plane is from the camera. This is also where one virtual pixel is one coordinate unit in x and y.
+
+f
+The distance of the far plane from the camera.
+
+Matrix.rotate(x, y, z)link
+Returns a matrix that rotates the displayable around the origin.
+
+x, y, z
+The amount to rotate around the origin, in degrees.
+
+The rotations are applied in order:
+
+A clockwise rotation by x degrees in the Y/Z plane.
+
+A clockwise rotation by y degrees in the Z/X plane.
+
+A clockwise rotation by z degrees in the X/Y plane.
+
+Matrix.scale(x, y, z)link
+Returns a matrix that scales the displayable.
+
+x, y, z
+The factor to scale each axis by.
+
+Model-Based Renderinglink
+While Ren'Py is primarily used with two dimensional rectangular images that are common in visual novels, underneath the hood it has a model-based renderer intended to to take advantage of features found in modern GPUs. This allows for a number of visual effects that would not otherwise be possible.
+
+As a warning, this is one of the most advanced features available in Ren'Py. In many cases, it's not necessary to understand how model-based rendering works behind the scenes - features like matrixcolor and Live2D support can be used without understanding how Model-Based rendering works, and more such features will be added to the understanding. This documentation is intended for very advanced creators, and for developers looking to add to Ren'Py itself.
+
+Model-Based Rendering is one of the most advanced features in Ren'Py, and this documentation may be hard to understand without first looking at the OpenGL, OpenGL ES, GLSL, and GLSL ES manual. What's more, since there are portions of the models that are passed directly to your GPU drivers, which may accept erroneous inputs, it's important to check on multiple kinds of hardware.
+
+Models, Renders, and Drawing Operationslink
+The fundamental thing that Ren'Py draws to the screen is a Model. A model consists of the following things:
+
+A Mesh of one or more triangles. A triangle consists of three vertices (corners), each of which contains a position in two or three-dimensional space, and may contain additional information, most commonly texture coordinates.
+
+Zero or more textures, with the precise number allowed being limited by the GPUs your game can run on. All GPUs should support at least three textures per model. A texture is a rectangle containing image data that's been loaded on the GPU, either directly or using a render-to-texture operation.
+
+A list of shader part names. Ren'Py uses these shader parts to created shaders, which are programs that are run on the GPU to render the model. Shader part names can be prefixed with a "-" to prevent that shader part from being used.
+
+Uniform values. A uniform is additional data that is the same throughout the model. For example, when a model represents a solid color, the color is a uniform.
+
+GL properties. GL properties are flags that further control how things are rendered, such as the minification/magnification modes and the color mask.
+
+As Ren'Py usually draws more than one thing to the screen, it creates a tree of Render objects. These Render objects may have Models or other Renders as children. (A Render object can also be turned into a Model. as described below.) A Render contains:
+
+A list of children, including a 2-dimensional offset that is applied to each child.
+
+A Matrix that describes how the children are transformed in three-dimensional space.
+
+Lists of shader part names, uniforms, and GL properties that are applied to the Models when being drawn.
+
+Flags that determine if the drawable-space clipping polygon should be updated.
+
+Ren'Py draws the screen by performing a depth-first walk through the tree of Renders, until a Model is encountered. During this walk, Ren'Py updates a matrix transforming the location of the Model, a clipping polygon, and lists of shader parts, uniforms, and gl properties. When a Model is encountered as part of this walk, the appropriate shader program is activated on the GPU, all information is transferred, and a drawing operation occurs.
+
+Where Models are Createdlink
+Ren'Py creates Models automatically as part of its normal operation. The main reason to understand where models are created is that models correspond to drawing operations, and hence are the units that shaders are applied to.
+
+Images and Image Manipulators
+These create a model with a mesh containing two triangles that cover the rectangle of the image. The mesh contains texture coordinates. The model uses the "renpy.texture" shader.
+
+Solid()
+The Solid displayable creates a mesh containing two triangles, and no texture coordinates. The model uses the "renpy.solid" shader, with the color placed in the u_renpy_solid_color uniform.
+
+Dissolve(), ImageDissolve(), AlphaDissolve(), Pixellate(), AlphaMask(), Flatten()
+Each of these transforms and displayables creates a Model with a mesh, shaders, and uniforms as is needed for its purposes.
+
+Live2D
+Live2D displayables may created multiple Models when rendered, generally one Model for each layer.
+
+Transform() and ATL
+A Transform creates a model if mesh is true, or if blur is being used. In this case, the children of the Transform are rendered to textures, with the mesh of the first texture being used for the mesh associated with the model.
+
+Not every transform creates a Model. Some transforms will simply add shaders and uniforms to a Render (such as transforms that use blur or alpha). Other transforms simply affect geometry.
+
+Render
+A Transform creates a model if its mesh attribute is True. is being used. In this case, the children of the Render are rendered to textures, with the mesh of the first texture being used for the mesh associated with the model.
+
+It's expected that Ren'Py will add more ways of creating models in the future.
+
+Shader Program Generationlink
+Ren'Py generates a shader program by first assembling a list of shader part names. This list consists of "renpy.geometry", the list of shader parts taken from Renders, and the list of shader parts found in the Model being drawn.
+
+The shader parts are then deduplicated. If a shader part begins with "-", it is removed from the list, as is the rest of that part without the leading "-". (So "-renpy.geometry" will cause itself and "renpy.geometry" to be removed.)
+
+Ren'Py then takes the list of shader parts, and retrieves lists of variables, functions, vertex shade parts, and fragment shader parts. These are, in turn, used to generate the source code for shaders, with the parts of the vertex and fragement shaders being included in low-number to high-number priority order.
+
+This means that any variable created by one of the shader will be accessible by every other fragment from any other shader in the list of shader parts. There is no scope like in Python functions to protect interference between shaders.
+
+Ren'Py keeps a cache of all combinations of shader parts that have ever been used in game/cache/shaders.txt, and loads them at startup. If major changes in shader use occur, this file should be edited or deleted so it can be re-created with valid data.
+
+Creating a Custom Shaderlink
+New shader parts can be created by calling the renpy.register_shader function and supplying portions of GLSL shaders.
+
+Generally, shader parts should be of the form "namespace.part", such as "mygame.recolor" or "mylibrary.warp". Names beginning with "renpy." or "live2d." are reserved for Ren'Py, as are names beginning with _.
+
+renpy.register_shader(name, **kwargs)link
+This registers a shader part. This takes name, and then keyword arguments.
+
+name
+A string giving the name of the shader part. Names starting with an underscore or "renpy." are reserved for Ren'Py.
+
+variables
+The variables used by the shader part. These should be listed one per line, a storage (uniform, attribute, or varying) followed by a type, name, and semicolon. For example:
+
+variables='''
+uniform sampler2D tex0;
+attribute vec2 a_tex_coord;
+varying vec2 v_tex_coord;
+'''
+vertex_functions
+If given, a string containing functions that will be included in the vertex shader.
+
+fragment_functions
+If given, a string containing functions that will be included in the fragment shader.
+
+Other keyword arguments should start with vertex_ or fragment_, and end with an integer priority. So "fragment_200" or "vertex_300". These give text that's placed in the appropriate shader at the given priority, with lower priority numbers inserted before higher priority numbers.
+
+Ren'Py supports only the following variable types:
+
+float (a Python float)
+
+vec2 (a tuple of 2 floats)
+
+vec3 (a tuple of 3 floats)
+
+vec4 (a tuple of 4 floats)
+
+mat4 (a Matrix)
+
+sampler2D (supplied by Ren'Py)
+
+Uniform variables should begin with u_, attributes with a_, and varying variables with v_. Names starting with u_renpy_, a_renpy, and v_renpy are reserved, as are the standard variables given below.
+
+As a general sketch for priority levels, priority 100 sets up geometry, priority 200 determines the initial fragment color (gl_FragColor), and higher-numbered priorities can apply effects to alter that color.
+
+Here's an example of a custom shader part that applies a gradient across each model it is used to render:
+
+init python:
+
+    renpy.register_shader("example.gradient", variables="""
+        uniform vec4 u_gradient_left;
+        uniform vec4 u_gradient_right;
+        uniform vec2 u_model_size;
+        varying float v_gradient_done;
+        attribute vec4 a_position;
+    """, vertex_300="""
+        v_gradient_done = a_position.x / u_model_size.x;
+    """, fragment_300="""
+        float gradient_done = v_gradient_done;
+        gl_FragColor *= mix(u_gradient_left, u_gradient_right, gradient_done);
+    """)
+The custom shader can then be applied using a transform:
+
+transform gradient:
+    shader "example.gradient"
+    u_gradient_left (1.0, 0.0, 0.0, 1.0)
+    u_gradient_right (0.0, 0.0, 1.0, 1.0)
+
+show eileen happy at gradient
+As stated before, the gradient_done variable from the example.gradient shader will be accessible by any and all other shaders applied from the same list. This can be useful when having optional parts in a given shader system, but it can also lead to name collisions when using two independent shaders.
+
+There is a variable that can help in debugging custom shaders:
+
+define config.log_gl_shaders = Falselink
+If true, source code for the GLSL shader programs will be written to log.txt on start.
+
+Transforms and Model-Based Renderinglink
+Model-Based rendering adds the following properties to ATL and Transform():
+
+meshlink
+Type
+None or True or tuple
+
+Default
+None
+
+If not None, this Transform will be rendered as a model. This means:
+
+A mesh will be created. If this is a 2-component tuple, it's taken as the number of points in the mesh, in the x and y directions. (Eacn dimension must be at least 2.) If True, the mesh is taken from the child.
+
+The child of this transform will be rendered to a texture.
+
+The renpy.texture shader will be added.
+
+mesh_padlink
+Type
+None or tuple
+
+Default
+None
+
+If not None, this can either be a 2 or 4 component tuple. If mesh is true and this is given, this applies padding to the size of the textues applied to the the textures used by the mesh. A two component tuple applies padding to the right and bottom, while a four component tuple applies padding to the left, top, right, and bottom.
+
+This can be used, in conjunction with the gl_pixel_perfect property, to render text into a mesh. In Ren'Py, text is rendered at the screen resoltution, which might overflow the boundaries of the texture that will be applied to the mesh. Adding a few pixels of padding makes the texture bigger, which will display all pixels. For example:
+
+transform adjust_text:
+    mesh True
+    mesh_pad (10, 0)
+    gl_pixel_perfect True
+    shader "shaders.adjust_text"
+will ensure that the texture passed to the shader contains all of the pixels of the text.
+
+shaderlink
+Type
+None or str or list of str
+
+Default
+None
+
+If not None, a shader part name or list of shader part names that will be applied to the this Render (if a Model is created) or the Models reached through this Render.
+
+blendlink
+Type
+None or str
+
+Default
+None
+
+if not None, this should be a string. This string is looked up in config.gl_blend_func to get the value for the gl_blend_func property. It's used to use alternate blend modes.
+
+The default blend modes this supports are "normal", "add", "multiply", "min", and "max".
+
+In addition, uniforms that start with u_ but not with u_renpy are made available as Transform properties. GL properties are made available as transform properties starting with gl_. For example, the color_mask property is made available as gl_color_mask.
+
+Blend Functionslink
+define config.gl_blend_func = { ... }link
+A dictionary used to map a blend mode name to a blend function. The blend modes are supplied to the blend func property, given below.
+
+The default blend modes are:
+
+gl_blend_func["normal"] = (GL_FUNC_ADD, GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+gl_blend_func["add"] = (GL_FUNC_ADD, GL_ONE, GL_ONE, GL_FUNC_ADD, GL_ZERO, GL_ONE)
+gl_blend_func["multiply"] = (GL_FUNC_ADD, GL_DST_COLOR, GL_ONE_MINUS_SRC_ALPHA, GL_FUNC_ADD, GL_ZERO, GL_ONE)
+gl_blend_func["min"] = (GL_MIN, GL_ONE, GL_ONE, GL_MIN, GL_ONE, GL_ONE)
+gl_blend_func["max"] = (GL_MAX, GL_ONE, GL_ONE, GL_MAX, GL_ONE, GL_ONE)
+Uniforms and Attributeslink
+The following uniforms are made available to all Models.
+
+vec2 u_model_size
+The width and height of the model.
+
+float u_lod_bias
+The level of detail bias to apply to texture lookups. This may be set in a Transform. The default value, taken from config.gl_lod_bias and defaulting to -0.5, biases Ren'Py to always pick the next bigger level and scale it down.
+
+mat4 u_transform
+The transform used to project virtual pixels to the OpenGL viewport.
+
+float u_time
+The time of the frame. The epoch is undefined, so it's best to treat this as a number that increases by one second a second. The time is modulo 86400, so it will reset to 0.0 once a day.
+
+vec4 u_random
+Four random numbers between 0.0 and 1.0 that are (with incredibly high likelyhood) different from frame to frame.
+
+vec4 u_viewport
+This gives the current viewport being drawn into. u_viewport.xy is are the coordinates of the bottom-left corner of the viewport, relative to the bottom-left corner of the window. u_viewport.pq is the width and height of the viewport.
+
+sampler2D tex0, sampler2D tex1, sampler2D tex2
+If textures are available, the corresponding samplers are placed in this variable.
+
+vec2 res0, vec2 res1, vec2 res2
+If textures are available, the size of the textures are placed in these variables. When the texture is loaded from disk, this is the size of the image file. After a render to texture, it's the number of drawable pixels the rendered texture covered.
+
+The following attributes are available to all models:
+
+vec4 a_position
+The position of the vertex being rendered.
+
+If textures are available, so is the following attribute:
+
+vec2 a_tex_coord
+The coordinate that this vertex projects to inside the textures.
+
+GL Propertieslink
+GL properties change the global state of OpenGL, or the Model-Based renderer. These properties can be used with a Transform, or with the Render.add_property() function.
+
+gl_blend_func
+If present, this is expected to be a six-component tuple, which is used to set the equation used to blend the pixel being drawn with the pixel it is being drawn to, and the parameters to that equation.
+
+Specifically, this should be (rgb_equation, src_rgb, dst_rgb, alpha_equation, src_alpha, dst_alpha). These will be used to call:
+
+glBlendEquationSeparate(rgb_equation, alpha_equation)
+glBlendFuncSeparate(src_rgb, dst_rgb, src_alpha, dst_alpha)
+Please see the OpenGL documentation for what these functions do. OpenGL constants can be imported from renpy.uguu:
+
+init python:
+    from renpy.uguu import GL_ONE, GL_ONE_MINUS_SRC_ALPHA
+The blend transform property is generally an easy way to use this.
+
+gl_color_mask
+This is expecting to be a 4-tuple of booleans, corresponding to the four channels of a pixel (red, green, blue, and alpha). If a given channel is true, the draw operation will write to that pixel. Otherwise, it will not.
+
+gl_depth
+If true, this will clear the depth buffer, and then enable depth rendering for this displayable and the children of this displayable.
+
+Note that drawing any pixel, even transparent pixels, will update the depth buffer. As a result, using this with images that have transparency may lead to unexpected problems. (As an alternative, consider the zorder and behind clauses of the show statement.)
+
+gl_pixel_perfect
+When True, Ren'Py will move the mesh such that the first vertex is aligned with a pixel on the screen. This is mostly used in conjunction with text, to ensure that the text remains sharp.
+
+The following properties only take effect when a texture is being created, by a Transform with mesh set, or by Model(), where these can be supplied the property method.
+
+gl_drawable_resolution
+If true or not set, the texture is rendered at the same resolution as the window displaying the game. If false, it's rendered at the virtual resolution of the displayable.
+
+gl_anisotropic
+If supplied, this determines if the textures applied to a mesh are created with anisotropy. Anisotropy is a feature that causes multiple texels (texture pixels) to be sampled when a texture is zoomed by a different amount in X and Y.
+
+This defaults to true. Ren'Py sets this to False for certain effects, like the Pixellate transition.
+
+gl_mipmap
+If supplied, this determines if the textures supplied to a mesh are created with mipmaps. This defaults to true.
+
+gl_texture_wrap
+When supplied, this determines how the textures applied to a mesh are wrapped. This expects a 2-component tuple, where the first component is used to set GL_TEXTURE_WRAP_S and the second component is used to set GL_TEXTURE_WRAP_T, which conventionally are the X and Y axes of the created textyure.
+
+The values should be OpenGL constants imported from renpy.uguu:
+
+init python:
+    from renpy.uguu import GL_CLAMP_TO_EDGE, GL_MIRRORED_REPEAT, GL_REPEAT
+Model Displayablelink
+The Model displayable acts as a factory to created models for use with the model-based renderer.
+
+classModel(size=None, **properties)link
+This is a displayable that causes Ren'Py to create a 2D or 3D model for use with the model-based renderer, that will be drawn in a single operation with the shaders given here, or selected by an enclosing Transform or Displayable.
+
+size
+If not None, this should be a width, height tuple, that's used to give the size of the Model. If not given, the model is the size of the area provided to it. The fit parameter to a texture takes precedence.
+
+If no mesh method is called, a mesh that sets a_position and a_tex_coord to match the way Ren'Py loads textures is created if at least one texture is supplied. Otherwise, a mesh that only sets a_position is used.
+
+All methods on this calls return the displayable the method is called on, making it possible to chain calls.
+
+child(displayable, fit=False)link
+This is the same as the texture method, except that the focus and main parameters are set to true.
+
+grid_mesh(width, height)link
+Creates a mesh that consists of a width x height grid of evenly spaced points, connecting each point to the closest points vertically and horizontally, and dividing each rectangle in the grid so created into triangles.
+
+width, height
+The number of points in the horizontal vertical directions, a integer that is at least 2.
+
+property(name, value)link
+Sets the value of a gl property.
+
+name
+A string giving the name of the GL property, including the "gl_" prefix.
+
+value
+The value of the gl property.
+
+shader(shader)link
+Adds a shader to this model.
+
+shader
+A string given the name of a shader to use with this model.
+
+texture(displayable, focus=False, main=False, fit=False)link
+Add a texture to this model, by rendering the given displayable. The first texture added will be tex0, the second tex1, a and so on.
+
+focus
+If true, focus events are passed to the displayable. It's assumed that coordinate relative to the model map 1:1 with coordinates relative to the displayable.
+
+main
+If true, this is marked as a main child of this displayable, which allows it to be inspected using the displayable inspector.
+
+fit
+If true, the Model is given the size of the displayable. This may only be true for one texture.
+
+uniform(name, value)link
+Sets the value of a uniform that is passed to the shaders.
+
+name
+A string giving the name of the uniform to set, including the "u_" prefix.
+
+value
+The value of the uniform. Either a float, a 2, 3, or 4 element tuple of floats, or a Matrix.
+
+Model Displayable Exampleslink
+The Model displayable can be used in conjunction with an ATL transform and a built-in shader to create the Dissolve transform:
+
+transform dt(delay=1.0, new_widget=None, old_widget=None):
+    delay delay
+    Model().texture(old_widget).child(new_widget)
+    shader [ 'renpy.dissolve' ]
+
+    u_renpy_dissolve 0.0
+    linear delay u_renpy_dissolve 1.0
+Using the Model displayable as the child of a displayable is incompatible with mesh, as the two both create models inside Ren'Py.
+
+Animated Shaderslink
+When using shaders that depend on u_time to animate, one must be aware, that even though every shader on screen will run on every frame displayed, Ren'Py does not run on constant FPS, and will fall back to the minimum frame rate of 5 FPS if no displayables require to be redrawn.
+
+When using an animating shader in an ATL transform, this can cause that shader to "stutter" and only animate properly while some other object on screen animates as well, in case the transform you're using it in does not cause redraws otherwise. In this case, an empty ATL loop can be introduced to force redraws to happen:
+
+transform fancy_shader:
+    shader 'my_fancy_shader'
+    pause 0
+    repeat
+pause 0 will cycle the frames as fast as possible. You can also set different values for pause to specify a minimum frame rate, like pause 1.0/30.
+
+Default Shader Partslink
+renpy.geometry (priority 100)link
+Variables:
+
+uniform mat4 u_transform;
+attribute vec4 a_position;
+Vertex shader:
+
+gl_Position = u_transform * a_position;
+renpy.alpha_mask (priority 200)link
+Variables:
+
+uniform sampler2D tex0;
+uniform sampler2D tex1;
+attribute vec2 a_tex_coord;
+varying vec2 v_tex_coord;
+Vertex shader:
+
+v_tex_coord = a_tex_coord;
+Fragment shader:
+
+vec4 src  = texture2D(tex0, v_tex_coord.xy);
+vec4 mask = texture2D(tex1, v_tex_coord.xy);
+
+gl_FragColor = vec4(src.r * mask.r, src.g * mask.r, src.b * mask.r, mask.r);
+renpy.blur (priority 200)link
+Variables:
+
+uniform sampler2D tex0;
+attribute vec2 a_tex_coord;
+varying vec2 v_tex_coord;
+uniform float u_renpy_blur_log2;
+Vertex shader:
+
+v_tex_coord = a_tex_coord;
+Fragment shader:
+
+gl_FragColor = vec4(0.);
+float renpy_blur_norm = 0.;
+
+for (float i = -5.; i < 1.; i += 1.) {
+    float renpy_blur_weight = exp(-0.5 * pow(u_renpy_blur_log2 - i, 2.));
+    renpy_blur_norm += renpy_blur_weight;
+}
+
+gl_FragColor += renpy_blur_norm * texture2D(tex0, v_tex_coord.xy, 0.);
+
+for (float i = 1.; i < 14.; i += 1.) {
+
+    if (i >= u_renpy_blur_log2 + 5.) {
+        break;
+    }
+
+    float renpy_blur_weight = exp(-0.5 * pow(u_renpy_blur_log2 - i, 2.));
+    gl_FragColor += renpy_blur_weight * texture2D(tex0, v_tex_coord.xy, i);
+    renpy_blur_norm += renpy_blur_weight;
+}
+
+if (renpy_blur_norm > 0.0) {
+    gl_FragColor /= renpy_blur_norm;
+} else {
+    gl_FragColor = texture2D(tex0, v_tex_coord.xy, 0.0);
+}
+renpy.dissolve (priority 200)link
+Variables:
+
+uniform float u_lod_bias;
+uniform sampler2D tex0;
+uniform sampler2D tex1;
+uniform float u_renpy_dissolve;
+attribute vec2 a_tex_coord;
+varying vec2 v_tex_coord;
+Vertex shader:
+
+v_tex_coord = a_tex_coord;
+Fragment shader:
+
+vec4 color0 = texture2D(tex0, v_tex_coord.st, u_lod_bias);
+vec4 color1 = texture2D(tex1, v_tex_coord.st, u_lod_bias);
+
+gl_FragColor = mix(color0, color1, u_renpy_dissolve);
+renpy.imagedissolve (priority 200)link
+Variables:
+
+uniform float u_lod_bias;
+uniform sampler2D tex0;
+uniform sampler2D tex1;
+uniform sampler2D tex2;
+uniform float u_renpy_dissolve_offset;
+uniform float u_renpy_dissolve_multiplier;
+attribute vec2 a_tex_coord;
+varying vec2 v_tex_coord;
+Vertex shader:
+
+v_tex_coord = a_tex_coord;
+Fragment shader:
+
+vec4 color0 = texture2D(tex0, v_tex_coord.st, u_lod_bias);
+vec4 color1 = texture2D(tex1, v_tex_coord.st, u_lod_bias);
+vec4 color2 = texture2D(tex2, v_tex_coord.st, u_lod_bias);
+
+float a = clamp((color0.a + u_renpy_dissolve_offset) * u_renpy_dissolve_multiplier, 0.0, 1.0);
+gl_FragColor = mix(color1, color2, a);
+renpy.solid (priority 200)link
+Variables:
+
+uniform vec4 u_renpy_solid_color;
+Fragment shader:
+
+gl_FragColor = u_renpy_solid_color;
+renpy.texture (priority 200)link
+Variables:
+
+uniform float u_lod_bias;
+uniform sampler2D tex0;
+attribute vec2 a_tex_coord;
+varying vec2 v_tex_coord;
+Vertex shader:
+
+v_tex_coord = a_tex_coord;
+Fragment shader:
+
+gl_FragColor = texture2D(tex0, v_tex_coord.xy, u_lod_bias);
+renpy.matrixcolor (priority 400)link
+Variables:
+
+uniform mat4 u_renpy_matrixcolor;
+Fragment shader:
+
+gl_FragColor = u_renpy_matrixcolor * gl_FragColor;
+renpy.alpha (priority 500)link
+Variables:
+
+uniform float u_renpy_alpha;
+uniform float u_renpy_over;
+Fragment shader:
+
+gl_FragColor = gl_FragColor * vec4(u_renpy_alpha, u_renpy_alpha, u_renpy_alpha, u_renpy_alpha * u_renpy_over);
+
+Other Functions and Variableslink
+This page lists and documents various miscellaneous functions and variables not better listed somewhere else.
+
+Ren'Py Versionlink
+renpy.version(tuple=False)link
+If tuple is false, returns a string containing "Ren'Py ", followed by the current version of Ren'Py.
+
+If tuple is true, returns a tuple giving each component of the version as an integer.
+
+renpy.version_stringlink
+The version number of Ren'Py, as a string of the form "Ren'Py 1.2.3.456".
+
+renpy.version_onlylink
+The version number of Ren'Py, without the Ren'Py prefix. A string of the form "1.2.3.456".
+
+renpy.version_tuplelink
+The version number of Ren'Py, as a tuple of the form (1, 2, 3, 456).
+
+This is a namedtuple with four fields: major, minor, patch, and commit.
+
+renpy.version_namelink
+A human readable version name, of the form "Example Version."
+
+renpy.licenselink
+A string giving license text that should be included in a game's about screen.
+
+Platform Detectionlink
+Ren'Py includes a number of variables that are set based on which platform it's running on.
+
+renpy.windowslink
+Has a true value when running on Windows.
+
+renpy.macintoshlink
+Has a true value when running on macOS.
+
+renpy.linuxlink
+Has a true value when running on Linux or other POSIX-like operating systems.
+
+renpy.androidlink
+Has a true value when running on Android.
+
+renpy.ioslink
+Has a true value when running on iOS.
+
+renpy.emscriptenlink
+Has a true value when running in the browser.
+
+renpy.mobilelink
+Has a true value when running on Android or iOS or in the browser.
+
+These are only set when running on the actual devices, not when running on in the emulators. These are more intended for use in platform-specific Python. For display layout, use screen variants.
+
+Memory Profilinglink
+renpy.diff_memory(update=True, skip_constants=False)link
+Profiles objects, surface, and texture memory use by Ren'Py and the game. Writes (to memory.txt and stdout) the difference in memory usage from the last time this function was called with update true.
+
+The accounting is by names in the store and in the Ren'Py implementation that the memory is reachable from. If an object is reachable from more than one name, it's assigned to the name it's most directly reachable from.
+
+skip_constants
+If True, the profiler will skip scanning of large Ren'Py's containers, that are intended to be immutable after startup.
+
+As it has to scan all memory used by Ren'Py, this function may take a long time to complete.
+
+renpy.profile_memory(fraction=1.0, minimum=0, skip_constants=False)link
+Profiles object, surface, and texture memory use by Ren'Py and the game. Writes an accounting of memory use by to the memory.txt file and stdout.
+
+The accounting is by names in the store and in the Ren'Py implementation that the memory is reachable from. If an object is reachable from more than one name, it's assigned to the name it's most directly reachable from.
+
+fraction
+The fraction of the total memory usage to show. 1.0 will show all memory usage, .9 will show the top 90%.
+
+minimum
+If a name is accounted less than minimum bytes of memory, it will not be printed.
+
+skip_constants
+If True, the profiler will skip scanning of large Ren'Py's containers, that are intended to be immutable after startup.
+
+As it has to scan all memory used by Ren'Py, this function may take a long time to complete.
+
+renpy.profile_rollback()link
+Profiles memory used by the rollback system. Writes (to memory.txt and stdout) the memory used by the rollback system. This tries to account for rollback memory used by various store variables, as well as by internal aspects of the rollback system.
+
+renpy.randomlink
+This object is a random number generator that implements the Python random number generation interface. Randomness can be generated by calling the various methods this object exposes. See the Python documentation for the full list, but the most useful are:
+
+renpy.random.random()
+
+Return the next random floating point number in the range (0.0, 1.0).
+
+renpy.random.randint(a, b)
+
+Return a random integer such that a <= N <= b.
+
+renpy.random.choice(seq)
+
+Return a random element from the non-empty sequence seq.
+
+renpy.random.shuffle(seq)
+
+Shuffles the elements of the sequence seq in place. This does not return a list, but changes an existing one.
+
+Unlike the standard Python random number generator, this object cooperates with rollback, generating the same numbers regardless of how many times we rollback. It should be used instead of the standard Python random module.
+
+# return a random float between 0 and 1
+$ randfloat = renpy.random.random()
+
+# return a random integer between 1 and 20
+$ d20roll = renpy.random.randint(1, 20)
+
+# return a random element from a list
+$ randfruit = renpy.random.choice(['apple', 'orange', 'plum'])
+renpy.random.Random(seed=None)
+
+Returns a new random number generator object separate from the main one, seeded with the specified value if provided.
+
+SDLlink
+These functions let you use the Python ctypes module to call functions in the SDL dll. There are no guarantees as to the version of SDL2 that's included with Ren'Py, including which features will or will not be compiled in. These functions may fail on platforms that can otherwise run Ren'Py, and so it's important to check for None before proceeding.
+
+renpy.get_sdl_dll()link
+This returns a ctypes.cdll object that refers to the library that contains the instance of SDL2 that Ren'Py is using.
+
+If this can not be done, None is returned.
+
+renpy.get_sdl_window_pointer()link
+Returns a pointer (of type ctypes.c_void_p) to the main window, or None if the main window is not displayed, or some other problem occurs.
+
+init python:
+
+    import ctypes
+
+    def get_window_position():
+        """
+        Retrieves the position of the window from SDL2.  Returns
+        the (x, y) of the upper left corner of the window, or
+        (0, 0) if it's not known.
+        """
+
+        sdl = renpy.get_sdl_dll()
+
+        if sdl is None:
+            return (0, 0)
+
+        win = renpy.get_sdl_window_pointer()
+
+        if win is None:
+            return (0, 0)
+
+        SDL_GetWindowPosition = sdl.SDL_GetWindowPosition
+
+        x = ctypes.c_int()
+        y = ctypes.c_int()
+
+        SDL_GetWindowPosition(win, ctypes.byref(x), ctypes.byref(y))
+Miscellaneouslink
+renpy.add_python_directory(path)link
+Adds path to the list of paths searched for Python modules and packages. The path should be a string relative to the game directory. This must be called before an import statement.
+
+renpy.add_to_all_stores(name, value)link
+Adds the value by the name to all creator defined namespaces. If the name already exist in that namespace - do nothing for it.
+
+This function may only be run from inside an init block. It is an error to run this function once the game has started.
+
+renpy.capture_focus(name='default')link
+If a displayable is currently focused, captured the rectangular bounding box of that displayable, and stores it with name. If not, removes any focus stored with name.
+
+Captured focuses are not saved when the game is saveed.
+
+name
+Should be a string. The name "tooltip" is special, as it's automatically captured when a displayable with a tooltip gains focus.
+
+renpy.choice_for_skipping()link
+Tells Ren'Py that a choice is coming up soon. This currently has two effects:
+
+If Ren'Py is skipping, and the Skip After Choices preferences is set to stop skipping, skipping is terminated.
+
+An auto-save is triggered.
+
+renpy.clear_capture_focus(name='default')link
+Clear the captured focus with name. If name is None, clear all captured focuses.
+
+renpy.clear_game_runtime()link
+Resets the game runtime counter.
+
+renpy.count_dialogue_blocks()link
+Returns the number of dialogue blocks in the game's original language.
+
+renpy.count_newly_seen_dialogue_blocks()link
+Returns the number of dialogue blocks the user has seen for the first time during this session.
+
+renpy.count_seen_dialogue_blocks()link
+Returns the number of dialogue blocks the user has seen in any play-through of the current game.
+
+renpy.display_notify(message)link
+The default implementation of renpy.notify().
+
+renpy.focus_coordinates()link
+This attempts to find the coordinates of the currently-focused displayable. If it can, it will return them as a (x, y, w, h) tuple. If not, it will return a (None, None, None, None) tuple.
+
+renpy.force_autosave(take_screenshot=False, block=False)link
+Forces a background autosave to occur.
+
+take_screenshot
+If True, a new screenshot will be taken. If False, the existing screenshot will be used.
+
+block
+If True, blocks until the autosave completes.
+
+renpy.free_memory()link
+Attempts to free some memory. Useful before running a renpygame-based minigame.
+
+renpy.full_restart(transition=False, *, save=False)link
+Causes Ren'Py to restart, returning the user to the main menu.
+
+transition
+If given, the transition to run, or None to not run a transition. False uses config.end_game_transition.
+
+save
+If true, the game is saved in _quit_slot before Ren'Py restarts and returns the user to the main menu.
+
+renpy.get_game_runtime()link
+Returns the game runtime counter.
+
+The game runtime counter counts the number of seconds that have elapsed while waiting for user input in the top-level context. (It does not count time spent in the main or game menus.)
+
+renpy.get_image_load_log(age=None)link
+A generator that yields a log of image loading activity. For the last 100 image loads, this returns:
+
+The time the image was loaded (in seconds since the epoch).
+
+The filename of the image that was loaded.
+
+A boolean that is true if the image was preloaded, and false if the game stalled to load it.
+
+The entries are ordered from newest to oldest.
+
+age
+If not None, only images that have been loaded in the past age seconds are included.
+
+The image load log is only kept if config.developer = True.
+
+renpy.get_menu_args()link
+Returns a tuple giving the arguments (as a tuple) and the keyword arguments (as a dict) passed to the current menu statement.
+
+renpy.get_mouse_name(interaction=False)link
+Returns the name of the mouse that should be shown.
+
+interaction
+If true, get a mouse name that is based on the type of interaction occuring. (This is rarely useful.)
+
+renpy.get_mouse_pos()link
+Returns an (x, y) tuple giving the location of the mouse pointer or the current touch location. If the device does not support a mouse and is not currently being touched, x and y are numbers, but not meaningful.
+
+renpy.get_on_battery()link
+Returns True if Ren'Py is running on a device that is powered by an internal battery, or False if the device is being charged by some external source.
+
+renpy.get_physical_size()link
+Returns the size of the physical window.
+
+renpy.get_refresh_rate(precision=5)link
+Returns the refresh rate of the current screen, as a floating-point number of frames per second.
+
+precision
+The raw data Ren'Py gets is number of frames per second, rounded down. This means that a monitor that runs at 59.95 frames per second will be reported at 59 fps. The precision argument reduces the precision of this reading, such that the only valid readings are multiples of the precision.
+
+Since all monitor framerates tend to be multiples of 5 (25, 30, 60, 75, and 120), this likely will improve accuracy. Setting precision to 1 disables this.
+
+renpy.get_renderer_info()link
+Returns a dictionary, giving information about the renderer Ren'Py is currently using. Defined keys are:
+
+"renderer"
+A string giving the name of the renderer that is in use.
+
+"resizable"
+True if and only if the window is resizable.
+
+"additive"
+True if and only if the renderer supports additive blending.
+
+"model"
+Present and true if model-based rendering is supported.
+
+Other, renderer-specific, keys may also exist. The dictionary should be treated as immutable. This should only be called once the display has been started (that is, after the init phase has finished).
+
+renpy.get_say_attributes()link
+Gets the attributes associated with the current say statement, or None if no attributes are associated with this statement.
+
+This is only valid when executing or predicting a say statement.
+
+renpy.get_skipping()link
+Returns "slow" if the Ren'Py is skipping, "fast" if Ren'Py is fast skipping, and None if it is not skipping.
+
+renpy.get_transition(layer=None)link
+Gets the transition for layer, or the entire scene if layer is None. This returns the transition that is queued up to run during the next interaction, or None if no such transition exists.
+
+renpy.iconify()link
+Iconifies the game.
+
+renpy.include_module(name)link
+Similar to renpy.load_module(), but instead of loading the module right away, inserts it into the init queue somewhere after the current AST node.
+
+The module may not contain init blocks lower than the block that includes the module. For example, if your module contains an init 10 block, the latest you can load it is init 10.
+
+Module loading may only occur from inside an init block.
+
+renpy.invoke_in_thread(fn, *args, **kwargs)link
+Invokes the function fn in a background thread, passing it the provided arguments and keyword arguments. Restarts the interaction once the thread returns.
+
+This function creates a daemon thread, which will be automatically stopped when Ren'Py is shutting down.
+
+This thread is very limited in what it can do with the Ren'Py API. Changing store variables is allowed, as is calling the renpy.queue_event() function. Most other portions of the Ren'Py API are expected to be called from the main thread.
+
+The primary use of this function is to place accesss to a web API in a second thread, and then update variables with the results of that call, by storing the result in variables and then relying on the interaction restart to cause screens to display those variables.
+
+This does not work on the web platform, except for immediately returning without an error.
+
+renpy.is_init_phase()link
+Returns True if Ren'Py is currently executing init code, or False otherwise.
+
+renpy.is_mouse_visible()link
+Returns True if the mouse cursor is visible, False otherwise.
+
+renpy.is_seen(ever=True)link
+Returns true if the current line has been seen by the player.
+
+If ever is true, we check to see if the line has ever been seen by the player. If false, we check if the line has been seen in the current play-through.
+
+renpy.is_skipping()link
+Returns True if Ren'Py is currently skipping (in fast or slow skip mode), or False otherwise.
+
+renpy.is_start_interact()link
+Returns true if restart_interaction has not been called during the current interaction. This can be used to determine if the interaction is just being started, or has been restarted.
+
+renpy.load_module(name)link
+This loads the Ren'Py module named name. A Ren'Py module consists of Ren'Py script that is loaded into the usual (store) namespace, contained in a file named name.rpym or name.rpymc. If a .rpym file exists, and is newer than the corresponding .rpymc file, it is loaded and a new .rpymc file is created.
+
+All of the init blocks (and other init-phase code) in the module are run before this function returns. An error is raised if the module name cannot be found, or is ambiguous.
+
+Module loading may only occur from inside an init block.
+
+renpy.load_string(s, filename='<string>')link
+Loads s as Ren'Py script that can be called.
+
+Returns the name of the first statement in s.
+
+filename is the name of the filename that statements in the string will appear to be from.
+
+renpy.maximum_framerate(t)link
+Forces Ren'Py to draw the screen at the maximum framerate for t seconds. If t is None, cancels the maximum framerate request.
+
+renpy.munge(name, filename=None)link
+Munges name, which must begin with __.
+
+filename
+The filename the name is munged into. If None, the name is munged into the filename containing the call to this function.
+
+renpy.not_infinite_loop(delay)link
+Resets the infinite loop detection timer to delay seconds.
+
+renpy.notify(message)link
+Causes Ren'Py to display the message using the notify screen. By default, this will cause the message to be dissolved in, displayed for two seconds, and dissolved out again.
+
+This is useful for actions that otherwise wouldn't produce feedback, like screenshots or quicksaves.
+
+Only one notification is displayed at a time. If a second notification is displayed, the first notification is replaced.
+
+This function just calls config.notify, allowing its implementation to be replaced by assigning a new function to that variable.
+
+renpy.predicting()link
+Returns true if Ren'Py is currently in a predicting phase.
+
+renpy.queue_event(name, up=False, **kwargs)link
+Queues an event with the given name. Name should be one of the event names in config.keymap, or a list of such names.
+
+up
+This should be false when the event begins (for example, when a keyboard button is pressed.) It should be true when the event ends (when the button is released.)
+
+The event is queued at the time this function is called. This function will not work to replace an event with another - doing so will change event order. (Use config.keymap instead.)
+
+This method is threadsafe.
+
+renpy.quit(relaunch=False, status=0, save=False)link
+This causes Ren'Py to exit entirely.
+
+relaunch
+If true, Ren'Py will run a second copy of itself before quitting.
+
+status
+The status code Ren'Py will return to the operating system. Generally, 0 is success, and positive integers are failure.
+
+save
+If true, the game is saved in _quit_slot before Ren'Py terminates.
+
+renpy.quit_event()link
+Triggers a quit event, as if the player clicked the quit button in the window chrome.
+
+renpy.reset_physical_size()link
+Attempts to set the size of the physical window to the size specified using renpy.config.physical_height and renpy.config.physical_width, or the size set using renpy.config.screen_width and renpy.config.screen_height if not set.
+
+renpy.restart_interaction()link
+Restarts the current interaction. Among other things, this displays images added to the scene, re-evaluates screens, and starts any queued transitions.
+
+This only does anything when called from within an interaction (for example, from an action). Outside an interaction, this function has no effect.
+
+renpy.screenshot(filename)link
+Saves a screenshot in filename.
+
+Returns True if the screenshot was saved successfully, False if saving failed for some reason.
+
+The config.screenshot_pattern and _screenshot_pattern variables control the file the screenshot is saved in.
+
+renpy.screenshot_to_bytes(size)link
+Returns a screenshot as a bytes object, that can be passed to im.Data(). The bytes will be a png-format image, such that:
+
+$ data = renpy.screenshot_to_bytes((640, 360))
+show expression im.Data(data, "screenshot.png"):
+    align (0, 0)
+Will show the image. The bytes objects returned can be stored in save files and persistent data. However, these may be large, and care should be taken to not include too many.
+
+size
+The size the screenshot will be resized to. If None, the screenshot will be resized, and hence will be the size of the player's window, without any letterbars.
+
+This function may be slow, and so it's intended for save-like screenshots, and not realtime effects.
+
+renpy.scry()link
+Returns the scry object for the current statement. Returns None if there are no statements executing.
+
+The scry object tells Ren'Py about things that must be true in the future of the current statement. Right now, the scry object has the following fields:
+
+nvl_clear
+Is true if an nvl clear statement will execute before the next interaction.
+
+say
+Is true if an say statement will execute before the next interaction.
+
+menu_with_caption
+Is true if a menu statement with a caption will execute before the next interaction.
+
+who
+If a say or menu-with-caption statement will execute before the next interaction, this is the character object it will use.
+
+The scry object has a next() method, which returns the scry object of the statement after the current one, if only one statement will execute after the this one. Otherwise, it returns None.
+
+renpy.set_mouse_pos(x, y, duration=0)link
+Jump the mouse pointer to the location given by arguments x and y. If the device does not have a mouse pointer, this does nothing.
+
+duration
+The time it will take to perform the move, in seconds. During this time, the mouse may be unresponsive.
+
+renpy.set_physical_size(size)link
+Attempts to set the size of the physical window to size. This has the side effect of taking the screen out of fullscreen mode.
+
+renpy.shown_window()link
+Call this to indicate that the window has been shown. This interacts with the "window show" statement, which shows an empty window whenever this functions has not been called during an interaction.
+
+renpy.split_properties(properties, *prefixes)link
+Splits up properties into multiple dictionaries, one per prefix. This function checks each key in properties against each prefix, in turn. When a prefix matches, the prefix is stripped from the key, and the resulting key is mapped to the value in the corresponding dictionary.
+
+If no prefix matches, an exception is thrown. (The empty string, "", can be used as the last prefix to create a catch-all dictionary.)
+
+For example, this splits properties beginning with text from those that do not:
+
+text_properties, button_properties = renpy.split_properties(properties, "text_", "")
+renpy.transition(trans, layer=None, always=False)link
+Sets the transition that will be used during the next interaction.
+
+layer
+The layer the transition applies to. If None, the transition applies to the entire scene.
+
+always
+If false, this respects the transition preference. If true, the transition is always run.
+
+renpy.vibrate(duration)link
+Causes the device to vibrate for duration seconds. Currently, this is only supported on Android.
+
+layout.yesno_screen(message, yes=None, no=None)link
+This causes the a yes/no prompt screen with the given message to be displayed. The screen will be hidden when the user hits yes or no.
+
+message
+The message that will be displayed.
+
+yes
+An action that is run when the user chooses yes.
+
+no
+An action that is run when the user chooses no.
+
+See Confirm() for an equivalent Action.
+
+
+
+_ren.py Files - Ren'Py in Pythonlink
+In more complicated games, it's possible to have files that consist of mostly Python, with a small number of Ren'Py statements, like init python:, to introduce the Python code to Ren'Py. Ren'Py has an alternative way to write these Python-heavy files. Files with a name ending in _ren.py can be writen in Python syntax, which is then transformed to Ren'Py script and processed.
+
+There are two main reasons to take advantage of this:
+
+Using the _ren.py syntax removes an extra layer of indentation that needs to be placed before every line of Python.
+
+Editors can open _ren.py files using tools that are specialized for Python, allowing the editor to perform code analysis and refactoring operations that aren't avalable for Python-in-Ren'Py.
+
+Ren'Py in Python files have names that end with _ren.py, for example, actions_ren.py. These files are processed in the same unicode order that .rpy files are processed, so actions_ren.py is processed at the same place that actions.rpy would have been. It's an error to have both a _ren.py and a .rpy file with the same root - for example, actions.rpy and actions_ren.py conflict, and will cause an error if both exist in the same directory.
+
+Syntax and Transformationlink
+Ren'Py in Python files contain three types of sections.
+
+A single ignored section starts the file. This can be used for Python imports and other constructs that will help the editors and other tools, but aren't part of the game and will not be executed by Ren'Py.
+
+One or more Ren'Py sections, which contain Ren'Py script. Ren'Py script is generally used to introduce Python sections, and also sets the indentation of that Python.
+
+A Ren'Py section is introduced with """renpy on a line by itself, and is terminated with """ on a line by itself. Both the start and the end need to be placed at the start of a line, without any indentation before it. If either is indented, the file will not be processed correctly.
+
+One or more Python sections. Python sections occur after Ren'Py sections, and are indented to the indentation level of the last non-whitespace, non-comment line in the Ren'Py section. If that line ends with a colon (:), the Python is indented by 4 more spaces.
+
+This transformation is used to create the equivalent of a .rpy file in memory, and this file is compiled in the usual way. Notably, Ren'Py in Python runs in the Ren'Py store (rather than in an isolated module), and the Python code is subject to the transformations that enable rollback and save/load to work - see Python Statements and Rollback.
+
+Examplelink
+Here's an example of a _ren.py file:
+
+# This is not included in the game. It's here so that an editor knows
+# the type of strength.
+strength = 100
+
+"""renpy
+init python:
+"""
+
+class BoostStrength(Action):
+    """
+    Boosts the strength of the player by 10.
+    """
+
+    def __call__(self):
+        global strength
+        strength += 10
+        renpy.restart_interaction()
+This file is transformed into (with some blank lines removed):
+
+init python:
+
+    class BoostStrength(Action):
+        """
+        Boosts the strength of the player by 10.
+        """
+
+        def __call__(self):
+            global strength
+            strength += 10
+            renpy.restart_interaction()
+
+
